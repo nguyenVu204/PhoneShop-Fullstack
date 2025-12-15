@@ -1,0 +1,100 @@
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import useFavoriteStore from "./stores/useFavoriteStore";
+import useAuthStore from "./stores/useAuthStore";
+import Header from "./components/Header";
+import Footer from './components/Footer';
+import HomePage from "./pages/HomePage";
+import ProductDetail from "./pages/ProductDetail";
+import CartPage from "./pages/CartPage";
+import { Toaster } from "react-hot-toast";
+import CheckoutPage from "./pages/CheckoutPage";
+import LoginPage from "./pages/LoginPage";
+import OrderHistoryPage from "./pages/OrderHistoryPage";
+import RegisterPage from "./pages/RegisterPage";
+import AdminLayout from "./layouts/AdminLayout";
+import Dashboard from "./pages/admin/Dashboard";
+import AdminRoute from "./components/AdminRoute";
+import OrderManager from "./pages/admin/OrderManager";
+import ProductManager from "./pages/admin/ProductManager";
+import ProductCreate from "./pages/admin/ProductCreate";
+import ProductEdit from "./pages/admin/ProductEdit";
+import UserManager from "./pages/admin/UserManager";
+import BrandManager from "./pages/admin/BrandManager";
+import InvoicePage from "./pages/admin/InvoicePage";
+import FavoritesPage from "./pages/FavoritesPage";
+import UserInfoPage from "./pages/UserInfoPage";
+import ShopPage from './pages/ShopPage';
+
+function App() {
+  const { user } = useAuthStore();
+  const fetchFavorites = useFavoriteStore((state) => state.fetchFavorites);
+
+  useEffect(() => {
+    if (user) {
+      fetchFavorites();
+    }
+  }, [user]);
+  return (
+    <BrowserRouter>
+      <Toaster position="top-center" reverseOrder={false} />
+      <Routes>
+        {/* --- NHÓM 1: TRANG KHÁCH HÀNG (Có Header) --- */}
+        <Route
+          element={
+            <div className="min-h-screen bg-gray-50">
+              <Header />
+              <main>
+                <Outlet />
+              </main>
+              <Footer />
+            </div>
+          }
+        >
+          <Route path="/" element={<HomePage />} />
+          <Route path="/product/:id" element={<ProductDetail />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/history" element={<OrderHistoryPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/favorites" element={<FavoritesPage />} />
+          <Route path="/shop" element={<ShopPage />} />
+          <Route
+            path="/profile"
+            element={
+              <div className="pt-16">
+                <UserInfoPage />
+              </div>
+            }
+          />
+
+          <Route
+            path="/my-orders"
+            element={
+              <div className="pt-16">
+                <OrderHistoryPage />
+              </div>
+            }
+          />
+        </Route>
+
+        {/* --- NHÓM 2: TRANG ADMIN (Có Sidebar, Bảo mật) --- */}
+        <Route element={<AdminRoute />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Dashboard />} />{" "}
+            <Route path="orders" element={<OrderManager />} />
+            <Route path="products" element={<ProductManager />} />
+            <Route path="products/create" element={<ProductCreate />} />
+            <Route path="products/edit/:id" element={<ProductEdit />} />
+            <Route path="users" element={<UserManager />} />
+            <Route path="brands" element={<BrandManager />} />
+            <Route path="orders/:id/invoice" element={<InvoicePage />} />
+          </Route>
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;

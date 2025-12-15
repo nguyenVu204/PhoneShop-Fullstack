@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #f8fafc; /* Slate-50: Màu nền xám rất nhạt, dịu mắt */
+  color: #1e293b; /* Slate-800: Màu chữ đen xám, đỡ gắt hơn đen tuyền */
+}

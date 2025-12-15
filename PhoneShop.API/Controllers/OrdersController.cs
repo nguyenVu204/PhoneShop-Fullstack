@@ -1,0 +1,276 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PhoneShop.API.Data;
+using PhoneShop.API.Dtos;
+using PhoneShop.API.Models;
+using System.Security.Claims;
+using ClosedXML.Excel;
+using System.Security.Claims;
+
+namespace PhoneShop.API.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class OrdersController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+
+        public OrdersController(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto dto)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // 1. Tạo đối tượng Order
+            var order = new Order
+            {
+                CustomerName = dto.CustomerName,
+                CustomerPhone = dto.CustomerPhone,
+                ShippingAddress = dto.ShippingAddress,
+                OrderDate = DateTime.Now,
+                Status = "Pending",
+                UserId = userId // Tạm thời để null (sau này làm Login sẽ lấy ID thật)
+            };
+
+            decimal totalAmount = 0;
+
+            // 2. Duyệt qua từng sản phẩm trong giỏ để tạo OrderDetail
+            foreach (var item in dto.Items)
+            {
+                // Tìm sản phẩm trong DB để lấy giá chuẩn
+                var variant = await _context.ProductVariants.FindAsync(item.VariantId);
+
+                if (variant == null)
+                {
+                    return BadRequest($"Sản phẩm ID {item.VariantId} không tồn tại.");
+                }
+
+                // Kiểm tra tồn kho (Bonus)
+                if (variant.StockQuantity < item.Quantity)
+                {
+                    return BadRequest($"Sản phẩm màu {variant.Color} đã hết hàng hoặc không đủ số lượng.");
+                }
+
+                // Trừ tồn kho
+                variant.StockQuantity -= item.Quantity;
+
+                // Tạo chi tiết đơn
+                var orderDetail = new OrderDetail
+                {
+                    ProductVariantId = item.VariantId,
+                    Quantity = item.Quantity,
+                    UnitPrice = variant.Price, // Lấy giá từ DB
+                    Order = order
+                };
+
+                // Cộng dồn tổng tiền
+                totalAmount += variant.Price * item.Quantity;
+
+                _context.OrderDetails.Add(orderDetail);
+            }
+
+            order.TotalAmount = totalAmount;
+            _context.Orders.Add(order);
+
+            // 3. Lưu tất cả vào SQL
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Đặt hàng thành công", OrderId = order.Id, Total = totalAmount });
+        }
+
+        // GET: api/orders/my-orders
+        [HttpGet("my-orders")]
+        [Authorize]
+        public async Task<ActionResult<object>> GetMyOrders(
+            [FromQuery] int page = 1,
+            [FromQuery] int limit = 5 // Mặc định lấy 5 đơn mỗi trang
+        )
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            // 1. Tạo Query
+            var query = _context.Orders
+                .Where(o => o.UserId == userId)
+                .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.ProductVariant)
+                .ThenInclude(v => v.Product)
+                .OrderByDescending(o => o.OrderDate); // Đơn mới nhất lên đầu
+
+            // 2. Tính toán phân trang
+            var totalItems = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalItems / (double)limit);
+
+            // 3. Lấy dữ liệu
+            var orders = await query
+                .Skip((page - 1) * limit)
+                .Take(limit)
+                .ToListAsync();
+
+            // 4. Trả về format chuẩn (Items + TotalPages)
+            return Ok(new
+            {
+                Items = orders,
+                TotalPages = totalPages,
+                CurrentPage = page,
+                TotalItems = totalItems
+            });
+        }
+
+        // GET: api/orders (Dành cho Admin - Có phân trang & tìm kiếm)
+        [HttpGet]
+        [Authorize(Roles = "Admin")] // Chỉ Admin được gọi
+        public async Task<ActionResult<object>> GetOrders(
+            [FromQuery] string? search,
+            [FromQuery] int page = 1,
+            [FromQuery] int limit = 10 // Admin thì hiện 10 đơn/trang cho dễ nhìn
+        )
+        {
+            var query = _context.Orders
+                .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.ProductVariant)
+                .ThenInclude(v => v.Product)
+                .AsQueryable();
+
+            // 1. Tìm kiếm (Mã đơn, Tên khách, SĐT)
+            if (!string.IsNullOrEmpty(search))
+            {
+                // Vì Id là int nên cần chuyển sang string để so sánh hoặc dùng logic khác
+                // Ở đây giả sử search đơn giản theo Tên hoặc SĐT
+                query = query.Where(o =>
+                    o.CustomerName.Contains(search) ||
+                    o.CustomerPhone.Contains(search) ||
+                    o.Id.ToString().Contains(search)
+                );
+            }
+
+            // 2. Sắp xếp: Mới nhất lên đầu
+            query = query.OrderByDescending(o => o.OrderDate);
+
+            // 3. Phân trang
+            var totalItems = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalItems / (double)limit);
+
+            var orders = await query
+                .Skip((page - 1) * limit)
+                .Take(limit)
+                .ToListAsync();
+
+            return Ok(new
+            {
+                Items = orders,
+                TotalPages = totalPages,
+                CurrentPage = page,
+                TotalItems = totalItems
+            });
+        }
+
+        // GET: api/orders/5 (Lấy chi tiết 1 đơn hàng)
+        [HttpGet("{id}")]
+        [Authorize] // Bắt buộc đăng nhập
+        public async Task<ActionResult<Order>> GetOrderById(int id)
+        {
+            // 1. Lấy thông tin người đang đăng nhập
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+
+            // 2. Tìm đơn hàng và Include đầy đủ thông tin sản phẩm
+            var order = await _context.Orders
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.ProductVariant)
+                        .ThenInclude(v => v.Product) // Để lấy tên sản phẩm, ảnh
+                .FirstOrDefaultAsync(o => o.Id == id);
+
+            // 3. Nếu không tìm thấy
+            if (order == null)
+            {
+                return NotFound(new { Message = "Không tìm thấy đơn hàng này." });
+            }
+
+            // 4. KIỂM TRA QUYỀN (Quan trọng!)
+            // Nếu không phải Admin VÀ cũng không phải chủ đơn hàng -> Chặn ngay
+            if (userRole != "Admin" && order.UserId != userId)
+            {
+                return Forbid(); // Trả về lỗi 403 Forbidden
+            }
+
+            return Ok(order);
+        }
+
+        // --- API ADMIN: Cập nhật trạng thái đơn ---
+        // PUT: api/orders/5/status
+        [HttpPut("{id}/status")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] string newStatus)
+        {
+            var order = await _context.Orders.FindAsync(id);
+
+            if (order == null)
+            {
+                return NotFound("Không tìm thấy đơn hàng");
+            }
+
+            order.Status = newStatus; // Ví dụ: "Shipping", "Completed", "Cancelled"
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Cập nhật trạng thái thành công" });
+        }
+
+        [HttpGet("export")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ExportOrders()
+        {
+            var orders = await _context.Orders
+                .Include(o => o.OrderDetails).ThenInclude(od => od.ProductVariant).ThenInclude(v => v.Product)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync();
+
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("DonHang");
+
+                // Header
+                worksheet.Cell(1, 1).Value = "Mã Đơn";
+                worksheet.Cell(1, 2).Value = "Ngày Đặt";
+                worksheet.Cell(1, 3).Value = "Khách Hàng";
+                worksheet.Cell(1, 4).Value = "SĐT";
+                worksheet.Cell(1, 5).Value = "Địa Chỉ";
+                worksheet.Cell(1, 6).Value = "Tổng Tiền";
+                worksheet.Cell(1, 7).Value = "Trạng Thái";
+                worksheet.Cell(1, 8).Value = "Chi Tiết Sản Phẩm (Gộp)";
+
+                worksheet.Range("A1:H1").Style.Font.Bold = true;
+
+                int row = 2;
+                foreach (var o in orders)
+                {
+                    worksheet.Cell(row, 1).Value = o.Id;
+                    worksheet.Cell(row, 2).Value = o.OrderDate;
+                    worksheet.Cell(row, 3).Value = o.CustomerName;
+                    worksheet.Cell(row, 4).Value = $"'{o.CustomerPhone}"; // Thêm dấu ' để excel hiểu là text, ko mất số 0 đầu
+                    worksheet.Cell(row, 5).Value = o.ShippingAddress;
+                    worksheet.Cell(row, 6).Value = o.TotalAmount;
+                    worksheet.Cell(row, 7).Value = o.Status;
+
+                    // Gộp tên các sản phẩm vào 1 ô cho gọn
+                    var details = string.Join("; ", o.OrderDetails.Select(od =>
+                        $"{od.ProductVariant?.Product?.Name} ({od.ProductVariant?.Color}) x{od.Quantity}"));
+                    worksheet.Cell(row, 8).Value = details;
+
+                    row++;
+                }
+                worksheet.Columns().AdjustToContents();
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Orders.xlsx");
+                }
+            }
+        }
+    }
+}

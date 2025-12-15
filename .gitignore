@@ -1,0 +1,17 @@
+# --- PHẦN CHO REACT (FRONTEND) ---
+node_modules/
+dist/
+build/
+.env
+.env.local
+.DS_Store
+
+# --- PHẦN CHO .NET (BACKEND) ---
+[Bb]in/
+[Oo]bj/
+.vs/
+.vscode/
+*.user
+*.suo
+appsettings.Development.json
+# appsettings.json
