@@ -24,7 +24,7 @@ export default function LoginPage() {
       // 3. Giải mã Token để lấy thông tin User (Tên, Email...)
       const decodedUser = jwtDecode(token);
       const role = decodedUser['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || decodedUser.role;
-      
+      console.log(role)
       console.log("Thông tin giải mã:", decodedUser);
 
       // Lưu ý: Key trong token thường là chữ thường hoặc theo chuẩn claim

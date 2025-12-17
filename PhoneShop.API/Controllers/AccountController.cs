@@ -91,5 +91,39 @@ namespace PhoneShop.API.Controllers
                 Expiration = token.ValidTo
             });
         }
+        // PUT: api/account/profile
+        [HttpPut("profile")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto)
+        {
+            // 1. Lấy User hiện tại từ Token
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+
+            // 2. Cập nhật thông tin
+            user.FullName = dto.FullName;
+            user.PhoneNumber = dto.PhoneNumber;
+
+            // 3. Lưu vào Database
+            var result = await _userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+            {
+                return BadRequest("Lỗi cập nhật thông tin.");
+            }
+
+            // 4. Trả về thông tin mới nhất để Frontend cập nhật lại Store
+            return Ok(new
+            {
+                Message = "Cập nhật thành công",
+                User = new
+                {
+                    user.Id,
+                    user.FullName,
+                    user.Email,
+                    user.PhoneNumber,
+                    Roles = await _userManager.GetRolesAsync(user)
+                }
+            });
+        }
     }
 }

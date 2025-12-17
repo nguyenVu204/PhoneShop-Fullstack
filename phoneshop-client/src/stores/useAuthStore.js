@@ -12,6 +12,8 @@ const useAuthStore = create(
       
       // Hành động: Đăng xuất (Xóa sạch)
       logout: () => set({ user: null, token: null }),
+
+      updateUser: (userData) => set({ user: userData }),
     }),
     {
       name: 'phone-shop-auth', // Tên key lưu trong LocalStorage
