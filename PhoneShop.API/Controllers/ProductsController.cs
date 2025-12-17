@@ -20,7 +20,7 @@ namespace PhoneShop.API.Controllers
             _context = context;
         }
 
-        // 1. API Lấy danh sách tất cả sản phẩm
+        // API Lấy danh sách tất cả sản phẩm
         // GET: api/products
         [HttpGet]
         public async Task<ActionResult<object>> GetProducts(
@@ -35,7 +35,7 @@ namespace PhoneShop.API.Controllers
         {
             var query = _context.Products
                 .Include(p => p.Brand)
-                .Include(p => p.Variants) // Phải include để lọc giá
+                .Include(p => p.Variants)
                 .AsQueryable();
 
             // 1. Tìm kiếm theo tên
@@ -104,7 +104,7 @@ namespace PhoneShop.API.Controllers
             });
         }
 
-        // 2. API Lấy chi tiết 1 sản phẩm
+        // API Lấy chi tiết 1 sản phẩm
         // GET: api/products/5
         [HttpGet("{id}")]
         public async Task<ActionResult<ProductDetailDto>> GetProduct(int id)

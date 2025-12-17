@@ -25,6 +25,8 @@ import FavoritesPage from "./pages/FavoritesPage";
 import UserInfoPage from "./pages/UserInfoPage";
 import ShopPage from './pages/ShopPage';
 import PaymentResultPage from './pages/PaymentResultPage';
+import AboutPage from "./pages/AboutPage";
+import ContactPage from "./pages/ContactPage";
 
 function App() {
   const { user } = useAuthStore();
@@ -60,6 +62,8 @@ function App() {
           <Route path="/favorites" element={<FavoritesPage />} />
           <Route path="/shop" element={<ShopPage />} />
           <Route path="/payment-result" element={<PaymentResultPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route
             path="/profile"
             element={
