@@ -45,7 +45,6 @@ namespace PhoneShop.API.Controllers
             if (existingBrand == null) return NotFound();
 
             existingBrand.Name = brand.Name; // Cập nhật tên
-            // existingBrand.Logo = brand.Logo; (Sau này làm upload ảnh thì mở cái này)
 
             await _context.SaveChangesAsync();
             return Ok(new { Message = "Cập nhật thành công" });

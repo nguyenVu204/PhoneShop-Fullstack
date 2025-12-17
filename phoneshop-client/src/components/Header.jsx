@@ -26,7 +26,6 @@ export default function Header() {
     if (searchTerm.trim()) {
       // Điều hướng sang trang Shop với tham số search
       navigate(`/shop?search=${encodeURIComponent(searchTerm)}`);
-      // Reset ô input nếu muốn, hoặc giữ nguyên
     }
   };
 
@@ -132,7 +131,7 @@ export default function Header() {
                   {/* Menu Items */}
                   <div className="py-2">
                     <Link
-                      to="/my-orders" // Sửa thành link trực tiếp
+                      to="/my-orders"
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition font-medium"
                     >
                       <Package size={18} />
@@ -140,7 +139,7 @@ export default function Header() {
                     </Link>
 
                     <Link
-                      to="/profile" // Sửa thành link trực tiếp
+                      to="/profile" 
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition font-medium"
                     >
                       <UserCircle size={18} />

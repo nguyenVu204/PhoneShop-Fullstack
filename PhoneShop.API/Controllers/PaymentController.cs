@@ -18,7 +18,7 @@ namespace PhoneShop.API.Controllers
             _context = context;
         }
 
-        // 1. Tạo link thanh toán
+        // Tạo link thanh toán
         [HttpPost("create-payment-url")]
         public async Task<IActionResult> CreatePaymentUrl([FromBody] VnPayPaymentRequestModel model)
         {
@@ -34,7 +34,7 @@ namespace PhoneShop.API.Controllers
             return Ok(new { url });
         }
 
-        // 2. Xử lý kết quả trả về (Callback)
+        // Xử lý kết quả trả về (Callback)
         [HttpGet("payment-callback")]
         public async Task<IActionResult> PaymentCallback()
         {

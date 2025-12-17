@@ -6,7 +6,7 @@ export default function Footer() {
     <footer className="bg-slate-900 text-gray-300 py-16 font-sans">
       <div className="container mx-auto px-4">
         
-        {/* TOP SECTION: 4 CỘT */}
+        {/* TOP SECTION */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           
           {/* CỘT 1: THÔNG TIN CHUNG */}

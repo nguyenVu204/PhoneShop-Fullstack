@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using PhoneShop.API.Data; // Nhớ using namespace chứa AppDbContext
+using PhoneShop.API.Data;
 using PhoneShop.API.Dtos;
 using PhoneShop.API.Models;
 
@@ -15,7 +15,7 @@ namespace PhoneShop.API.Controllers
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
-        private readonly AppDbContext _context; // Thêm DbContext để query linh hoạt hơn
+        private readonly AppDbContext _context;
 
         public UsersController(UserManager<AppUser> userManager, RoleManager<IdentityRole> roleManager, AppDbContext context)
         {
@@ -137,7 +137,7 @@ namespace PhoneShop.API.Controllers
             return Ok(new { Message = "Đã xóa người dùng thành công" });
         }
 
-        // 4. Phân quyền (Giữ nguyên logic cũ nếu bạn cần)
+        // 4. Phân quyền
         [HttpPost("assign-role")]
         public async Task<IActionResult> AssignRole([FromBody] AssignRoleDto dto)
         {

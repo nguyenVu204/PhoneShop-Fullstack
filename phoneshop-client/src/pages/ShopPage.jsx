@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom"; // Import useSearchParams
+import { Link, useSearchParams } from "react-router-dom";
 import { Search, ChevronLeft, ChevronRight, ShoppingCart, Heart, Filter, ArrowUpDown } from "lucide-react";
 import axiosClient from "../api/axiosClient";
 import useFavoriteStore from '../stores/useFavoriteStore';

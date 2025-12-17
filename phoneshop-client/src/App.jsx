@@ -79,7 +79,7 @@ function App() {
           />
         </Route>
 
-        {/* --- NHÓM 2: TRANG ADMIN (Có Sidebar, Bảo mật) --- */}
+        {/* --- NHÓM 2: TRANG ADMIN  --- */}
         <Route element={<AdminRoute />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Dashboard />} />{" "}

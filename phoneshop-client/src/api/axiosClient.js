@@ -33,12 +33,9 @@ axiosClient.interceptors.response.use(
     (error) => {
         // Nếu lỗi là 401 (Unauthorized) -> Token hết hạn hoặc không hợp lệ
         if (error.response && error.response.status === 401) {
-            // Xóa token trong LocalStorage (Key của Zustand persist)
-            localStorage.removeItem('phone-shop-auth');
+            // Xóa token trong LocalStorage p-auth');
             
             // Chuyển hướng về trang login
-            // Lưu ý: Vì file này là JS thường (không phải Component React) nên không dùng useNavigate được.
-            // Phải dùng window.location
             window.location.href = '/login';
             
             return Promise.reject(error);

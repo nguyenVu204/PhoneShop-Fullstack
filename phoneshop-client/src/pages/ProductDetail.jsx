@@ -69,7 +69,6 @@ export default function ProductDetail() {
                    className="w-3/4 object-contain hover:scale-105 transition duration-500"
                 />
              </div>
-             {/* Nếu có nhiều ảnh nhỏ (Gallery) thì thêm ở đây */}
           </div>
 
           {/* CỘT PHẢI: THÔNG TIN */}

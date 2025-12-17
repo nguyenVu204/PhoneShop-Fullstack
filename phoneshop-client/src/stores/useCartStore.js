@@ -41,7 +41,7 @@ const useCartStore = create(
 
       clearCart: () => set({ items: [] }),
 
-      // --- THÊM HÀM NÀY (Bắt buộc phải có để nút +/- hoạt động) ---
+      
       updateQuantity: (variantId, quantity) => {
         const currentItems = get().items;
         if (quantity < 1) return; // Không cho giảm dưới 1

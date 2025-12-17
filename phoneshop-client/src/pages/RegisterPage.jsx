@@ -42,7 +42,7 @@ export default function RegisterPage() {
     } catch (error) {
       console.error("Lỗi đăng ký:", error);
       
-      // --- SỬA ĐOẠN XỬ LÝ LỖI NÀY ---
+      // --- XỬ LÝ LỖI ---
       if (error.response && error.response.data) {
         const data = error.response.data;
         

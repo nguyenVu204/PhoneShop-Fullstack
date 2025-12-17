@@ -5,7 +5,7 @@ namespace PhoneShop.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    // [Authorize(Roles = "Admin")] // Nếu muốn bảo mật chặt hơn thì mở comment dòng này
+    // [Authorize(Roles = "Admin")]
     public class UploadController : ControllerBase
     {
         private readonly IWebHostEnvironment _environment;

@@ -234,8 +234,6 @@ export default function OrderHistoryPage() {
                         </span>
                       </div>
                       <div className="flex gap-3">
-                        {/* --- SỬA ĐIỀU KIỆN TẠI ĐÂY --- */}
-                        {/* Chỉ hiện nút Hủy & Thanh toán nếu: Trạng thái là Pending VÀ Chưa thanh toán */}
                         {order.status === "Pending" && order.paymentStatus !== "Paid" && (
                           <div className="flex gap-2">
                             <button

@@ -2,15 +2,14 @@ import { useEffect, useState } from "react";
 import { Trash2, ArrowLeft, MapPin, Phone, User, CreditCard, Banknote, Plus, Minus, ArrowRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import useCartStore from "../stores/useCartStore";
-import useAuthStore from "../stores/useAuthStore"; // <--- 1. Import thêm cái này
+import useAuthStore from "../stores/useAuthStore";
 import axiosClient from "../api/axiosClient";
 import toast from "react-hot-toast";
 
 export default function CartPage() {
-  // Lấy dữ liệu giỏ hàng
+
   const { items, removeFromCart, clearCart, updateQuantity } = useCartStore();
   
-  // 2. Lấy thông tin User từ AuthStore (Thay vì gọi API)
   const { user } = useAuthStore();
   
   const navigate = useNavigate();
@@ -25,14 +24,13 @@ export default function CartPage() {
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [loading, setLoading] = useState(false);
 
-  // 3. Tự động điền thông tin khi vào trang (Dựa vào biến user của Store)
+  // Tự động điền thông tin khi vào trang 
   useEffect(() => {
     if (user) {
         setInfo((prev) => ({
             ...prev,
-            customerName: user.fullName || user.name || "", // Lấy tên từ store
-            customerPhone: user.phoneNumber || user.phone || "", // Lấy sđt từ store
-            // Địa chỉ thường không lưu trong token nên để trống để khách tự nhập
+            customerName: user.fullName || user.name || "", 
+            customerPhone: user.phoneNumber || user.phone || "", 
             shippingAddress: "" 
         }));
     }

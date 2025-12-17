@@ -31,7 +31,7 @@ namespace PhoneShop.API.Controllers
                     r.Rating,
                     r.Comment,
                     r.CreatedAt,
-                    UserFullName = r.User.FullName // Chỉ lấy tên thôi, không lấy password
+                    UserFullName = r.User.FullName
                 })
                 .ToListAsync();
 
@@ -46,7 +46,7 @@ namespace PhoneShop.API.Controllers
             // 1. Lấy UserId từ Token
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // 2. Validate dữ liệu thủ công (nếu cần)
+            // 2. Validate dữ liệu
             if (request.Rating < 1 || request.Rating > 5)
                 return BadRequest("Số sao phải từ 1 đến 5");
 
@@ -56,7 +56,7 @@ namespace PhoneShop.API.Controllers
                 ProductId = request.ProductId,
                 Rating = request.Rating,
                 Comment = request.Comment,
-                UserId = userId,       // Gán UserId ở đây
+                UserId = userId,      
                 CreatedAt = DateTime.Now
             };
 

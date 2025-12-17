@@ -24,11 +24,11 @@ export default function HomePage() {
             const brandsRes = await axiosClient.get('/brands');
             setBrands(brandsRes.data);
 
-            // 2. Lấy sản phẩm MỚI NHẤT (8 cái)
+            // 2. Lấy sản phẩm MỚI NHẤT
             const newRes = await axiosClient.get('/products?page=1&limit=8&sort=newest');
             setNewProducts(newRes.data.items);
 
-            // 3. Lấy sản phẩm GIÁ RẺ/HOT (8 cái - sort giá tăng dần)
+            // 3. Lấy sản phẩm GIÁ RẺ/HOT 
             const hotRes = await axiosClient.get('/products?page=1&limit=4&sort=price_asc');
             setHotProducts(hotRes.data.items);
 
@@ -41,7 +41,7 @@ export default function HomePage() {
     fetchData();
   }, []);
 
-  // Component Card Sản phẩm nhỏ gọn để tái sử dụng
+  // Component Card Sản phẩm
   const ProductCard = ({ product, label, labelColor }) => (
     <Link to={`/product/${product.id}`} className="group h-full">
         <div className="bg-white rounded-2xl p-4 shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 h-full flex flex-col hover:-translate-y-1 relative">

@@ -26,17 +26,17 @@ namespace PhoneShop.API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
-            // 1. Kiểm tra email tồn tại
+            // Kiểm tra email tồn tại
             var userExists = await _userManager.FindByEmailAsync(dto.Email);
             if (userExists != null)
                 return BadRequest("Email này đã được sử dụng!");
 
-            // 2. Tạo User mới
+            // Tạo User mới
             var newUser = new AppUser
             {
                 FullName = dto.FullName,
                 Email = dto.Email,
-                UserName = dto.Email // Lấy email làm username luôn cho tiện
+                UserName = dto.Email // Lấy email làm username
             };
 
             var result = await _userManager.CreateAsync(newUser, dto.Password);
@@ -51,16 +51,16 @@ namespace PhoneShop.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
-            // 1. Tìm user theo email
+            // Tìm user theo email
             var user = await _userManager.FindByEmailAsync(dto.Email);
             
-            // 2. Kiểm tra password
+            // Kiểm tra password
             if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
             {
                 return Unauthorized("Email hoặc mật khẩu không đúng.");
             }
 
-            // 3. Nếu đúng -> Tạo JWT Token
+            // Nếu đúng -> Tạo JWT Token
             var authClaims = new List<Claim>
             {
                 new Claim(ClaimTypes.Email, user.Email),
@@ -80,7 +80,7 @@ namespace PhoneShop.API.Controllers
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
-                expires: DateTime.Now.AddHours(3), // Token sống trong 3 tiếng
+                expires: DateTime.Now.AddHours(3), // Token 3 tiếng
                 claims: authClaims,
                 signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
             );
@@ -95,15 +95,15 @@ namespace PhoneShop.API.Controllers
         [HttpPut("profile")]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto)
         {
-            // 1. Lấy User hiện tại từ Token
+            // Lấy User hiện tại từ Token
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Unauthorized();
 
-            // 2. Cập nhật thông tin
+            // Cập nhật thông tin
             user.FullName = dto.FullName;
             user.PhoneNumber = dto.PhoneNumber;
 
-            // 3. Lưu vào Database
+            // Lưu vào Database
             var result = await _userManager.UpdateAsync(user);
 
             if (!result.Succeeded)
@@ -111,7 +111,7 @@ namespace PhoneShop.API.Controllers
                 return BadRequest("Lỗi cập nhật thông tin.");
             }
 
-            // 4. Trả về thông tin mới nhất để Frontend cập nhật lại Store
+            // Trả về thông tin mới nhất để Frontend cập nhật lại Store
             return Ok(new
             {
                 Message = "Cập nhật thành công",

@@ -76,20 +76,19 @@ namespace PhoneShop.API.Controllers
 
                 // Fill đầy đủ các ngày trong khoảng thời gian
                 // Nếu là Tháng: Loop từ ngày 1 đến hết tháng (hoặc đến hôm nay)
-                // Ở đây mình làm đơn giản là loop daysCount ngày
 
                 var list = new List<object>();
                 // Nếu là tháng thì loop hết số ngày trong tháng, nếu là tuần thì 7 ngày
                 int loopLimit = (timeframe == "month") ? daysCount : 7;
 
-                // Logic loop ngày hơi khác nhau xíu để hiển thị đẹp
+                // Logic loop ngày 
                 for (int i = 0; i < loopLimit; i++)
                 {
                     DateTime date;
                     if (timeframe == "month") date = new DateTime(today.Year, today.Month, 1).AddDays(i);
                     else date = fromDate.AddDays(i);
 
-                    // Chỉ hiện đến ngày hôm nay thôi, tương lai chưa đến thì thôi (tùy chọn)
+                    // Chỉ hiện đến ngày hôm nay 
                     if (date > today && timeframe == "month") break;
 
                     list.Add(new

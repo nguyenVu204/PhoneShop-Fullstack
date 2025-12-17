@@ -11,7 +11,7 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     fullName: "",
     phoneNumber: "",
-    email: "", // Email thường không cho sửa
+    email: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,7 @@ export default function ProfilePage() {
         phoneNumber: formData.phoneNumber
       });
 
-      // API trả về user mới -> Cập nhật vào Store ngay
+      // API trả về user mới -> Cập nhật vào Store
       updateUser(res.data.user);
       
       toast.success("Cập nhật hồ sơ thành công!");

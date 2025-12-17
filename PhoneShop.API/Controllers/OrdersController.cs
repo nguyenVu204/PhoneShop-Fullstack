@@ -25,7 +25,7 @@ namespace PhoneShop.API.Controllers
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto dto)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            // 1. Tạo đối tượng Order
+            // Tạo đối tượng Order
             var order = new Order
             {
                 CustomerName = dto.CustomerName,
@@ -40,7 +40,7 @@ namespace PhoneShop.API.Controllers
 
             decimal totalAmount = 0;
 
-            // 2. Duyệt qua từng sản phẩm trong giỏ để tạo OrderDetail
+            // Duyệt qua từng sản phẩm trong giỏ để tạo OrderDetail
             foreach (var item in dto.Items)
             {
                 // Tìm sản phẩm trong DB để lấy giá chuẩn
@@ -78,7 +78,7 @@ namespace PhoneShop.API.Controllers
             order.TotalAmount = totalAmount;
             _context.Orders.Add(order);
 
-            // 3. Lưu tất cả vào SQL
+            // Lưu tất cả vào SQL
             await _context.SaveChangesAsync();
 
             return Ok(new { Message = "Đặt hàng thành công", OrderId = order.Id, Total = totalAmount });
@@ -95,7 +95,7 @@ namespace PhoneShop.API.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-            // 1. Tạo Query
+            // Tạo Query
             var query = _context.Orders
                 .Where(o => o.UserId == userId)
                 .Include(o => o.OrderDetails)
@@ -103,17 +103,17 @@ namespace PhoneShop.API.Controllers
                 .ThenInclude(v => v.Product)
                 .OrderByDescending(o => o.OrderDate); // Đơn mới nhất lên đầu
 
-            // 2. Tính toán phân trang
+            // Tính toán phân trang
             var totalItems = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalItems / (double)limit);
 
-            // 3. Lấy dữ liệu
+            // Lấy dữ liệu
             var orders = await query
                 .Skip((page - 1) * limit)
                 .Take(limit)
                 .ToListAsync();
 
-            // 4. Trả về format chuẩn (Items + TotalPages)
+            // Trả về format chuẩn (Items + TotalPages)
             return Ok(new
             {
                 Items = orders,
@@ -123,13 +123,13 @@ namespace PhoneShop.API.Controllers
             });
         }
 
-        // GET: api/orders (Dành cho Admin - Có phân trang & tìm kiếm)
+        // GET: api/orders (Dành cho Admin)
         [HttpGet]
-        [Authorize(Roles = "Admin")] // Chỉ Admin được gọi
+        [Authorize(Roles = "Admin")] // Chỉ Admin
         public async Task<ActionResult<object>> GetOrders(
             [FromQuery] string? search,
             [FromQuery] int page = 1,
-            [FromQuery] int limit = 10 // Admin thì hiện 10 đơn/trang cho dễ nhìn
+            [FromQuery] int limit = 10 
         )
         {
             var query = _context.Orders
@@ -138,11 +138,11 @@ namespace PhoneShop.API.Controllers
                 .ThenInclude(v => v.Product)
                 .AsQueryable();
 
-            // 1. Tìm kiếm (Mã đơn, Tên khách, SĐT)
+            // Tìm kiếm (Mã đơn, Tên khách, SĐT)
             if (!string.IsNullOrEmpty(search))
             {
-                // Vì Id là int nên cần chuyển sang string để so sánh hoặc dùng logic khác
-                // Ở đây giả sử search đơn giản theo Tên hoặc SĐT
+                
+                // search theo Tên hoặc SĐT
                 query = query.Where(o =>
                     o.CustomerName.Contains(search) ||
                     o.CustomerPhone.Contains(search) ||
@@ -150,10 +150,10 @@ namespace PhoneShop.API.Controllers
                 );
             }
 
-            // 2. Sắp xếp: Mới nhất lên đầu
+            // Sắp xếp: Mới nhất lên đầu
             query = query.OrderByDescending(o => o.OrderDate);
 
-            // 3. Phân trang
+            // Phân trang
             var totalItems = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalItems / (double)limit);
 
@@ -176,25 +176,24 @@ namespace PhoneShop.API.Controllers
         [Authorize] // Bắt buộc đăng nhập
         public async Task<ActionResult<Order>> GetOrderById(int id)
         {
-            // 1. Lấy thông tin người đang đăng nhập
+            // Lấy thông tin người đang đăng nhập
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var userRole = User.FindFirstValue(ClaimTypes.Role);
 
-            // 2. Tìm đơn hàng và Include đầy đủ thông tin sản phẩm
+            // Tìm đơn hàng và Include đầy đủ thông tin sản phẩm
             var order = await _context.Orders
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.ProductVariant)
                         .ThenInclude(v => v.Product) // Để lấy tên sản phẩm, ảnh
                 .FirstOrDefaultAsync(o => o.Id == id);
 
-            // 3. Nếu không tìm thấy
+            // Nếu không tìm thấy
             if (order == null)
             {
                 return NotFound(new { Message = "Không tìm thấy đơn hàng này." });
             }
 
-            // 4. KIỂM TRA QUYỀN (Quan trọng!)
-            // Nếu không phải Admin VÀ cũng không phải chủ đơn hàng -> Chặn ngay
+            // Nếu không phải Admin VÀ cũng không phải chủ đơn hàng
             if (userRole != "Admin" && order.UserId != userId)
             {
                 return Forbid(); // Trả về lỗi 403 Forbidden

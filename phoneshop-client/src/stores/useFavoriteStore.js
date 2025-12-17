@@ -3,7 +3,7 @@ import axiosClient from '../api/axiosClient';
 import toast from 'react-hot-toast';
 
 const useFavoriteStore = create((set, get) => ({
-  favoriteIds: [], // Chỉ lưu mảng ID: [1, 5, 8] để check nhanh
+  favoriteIds: [],
 
   // Load danh sách ID khi user đăng nhập
   fetchFavorites: async () => {
@@ -22,7 +22,7 @@ const useFavoriteStore = create((set, get) => ({
       // Gọi API
       const res = await axiosClient.post(`/favorites/toggle/${productId}`);
       
-      // Cập nhật State Frontend ngay lập tức
+      // Cập nhật State
       const { favoriteIds } = get();
       const isLiked = res.data.isLiked;
 
