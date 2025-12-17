@@ -206,7 +206,7 @@ namespace PhoneShop.API.Controllers
         // --- API ADMIN: Cập nhật trạng thái đơn ---
         // PUT: api/orders/5/status
         [HttpPut("{id}/status")]
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] string newStatus)
         {
             var order = await _context.Orders.FindAsync(id);
