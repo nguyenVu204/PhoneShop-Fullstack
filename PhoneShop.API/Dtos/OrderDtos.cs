@@ -6,6 +6,8 @@
         public string CustomerName { get; set; } = string.Empty;
         public string CustomerPhone { get; set; } = string.Empty;
         public string ShippingAddress { get; set; } = string.Empty;
+        public string PaymentMethod { get; set; } = string.Empty;
+
 
         // Danh sách sản phẩm muốn mua
         public List<CartItemDto> Items { get; set; } = new List<CartItemDto>();

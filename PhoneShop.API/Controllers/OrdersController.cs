@@ -33,7 +33,9 @@ namespace PhoneShop.API.Controllers
                 ShippingAddress = dto.ShippingAddress,
                 OrderDate = DateTime.Now,
                 Status = "Pending",
-                UserId = userId // Tạm thời để null (sau này làm Login sẽ lấy ID thật)
+                UserId = userId,
+                PaymentMethod = dto.PaymentMethod ?? "COD",
+                PaymentStatus = "Unpaid" // Mặc định tạo đơn là chưa thanh toán
             };
 
             decimal totalAmount = 0;
@@ -220,6 +222,22 @@ namespace PhoneShop.API.Controllers
             return Ok(new { Message = "Cập nhật trạng thái thành công" });
         }
 
+        // PUT: api/orders/{id}/payment-status
+        [HttpPut("{id}/payment-status")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdatePaymentStatus(int id, [FromBody] string newStatus)
+        {
+            var order = await _context.Orders.FindAsync(id);
+            if (order == null) return NotFound();
+
+            // newStatus: "Paid" hoặc "Unpaid"
+            order.PaymentStatus = newStatus;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { Message = "Cập nhật trạng thái thanh toán thành công" });
+        }
+
+        // GET: api/orders/export
         [HttpGet("export")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ExportOrders()

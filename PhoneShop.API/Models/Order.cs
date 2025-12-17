@@ -20,6 +20,8 @@ namespace PhoneShop.API.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalAmount { get; set; }
         public string Status { get; set; } = "Pending";
+        public string PaymentMethod { get; set; } = "COD";
+        public string PaymentStatus { get; set; } = "Unpaid";
 
         public List<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     }

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PhoneShop.API.Data;
 using PhoneShop.API.Models;
+using PhoneShop.API.Services.VnPay;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -69,6 +70,9 @@ builder.Services.AddAuthentication(options => {
     };
 });
 // -------------------------
+
+// --- VN PAY SERVICE ---
+builder.Services.AddScoped<IVnPayService, VnPayService>();
 
 var app = builder.Build();
 

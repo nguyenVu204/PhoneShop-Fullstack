@@ -8,7 +8,6 @@ import HomePage from "./pages/HomePage";
 import ProductDetail from "./pages/ProductDetail";
 import CartPage from "./pages/CartPage";
 import { Toaster } from "react-hot-toast";
-import CheckoutPage from "./pages/CheckoutPage";
 import LoginPage from "./pages/LoginPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -25,6 +24,7 @@ import InvoicePage from "./pages/admin/InvoicePage";
 import FavoritesPage from "./pages/FavoritesPage";
 import UserInfoPage from "./pages/UserInfoPage";
 import ShopPage from './pages/ShopPage';
+import PaymentResultPage from './pages/PaymentResultPage';
 
 function App() {
   const { user } = useAuthStore();
@@ -57,9 +57,9 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/history" element={<OrderHistoryPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/favorites" element={<FavoritesPage />} />
           <Route path="/shop" element={<ShopPage />} />
+          <Route path="/payment-result" element={<PaymentResultPage />} />
           <Route
             path="/profile"
             element={
