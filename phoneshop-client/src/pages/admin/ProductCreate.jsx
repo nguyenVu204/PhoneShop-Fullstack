@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, UploadCloud, Loader2, Link as LinkIcon, Image as ImageIcon } from 'lucide-react'; // Thêm icon LinkIcon
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import axiosClient from '../../api/axiosClient';
@@ -7,137 +7,165 @@ import axiosClient from '../../api/axiosClient';
 export default function ProductCreate() {
   const navigate = useNavigate();
   const [brands, setBrands] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
-  // State 1: Thông tin chung sản phẩm (Cha)
+  // State 1: Thông tin chung
   const [productData, setProductData] = useState({
-    name: '',
-    brandId: '', // Sẽ lưu ID hãng
-    description: '',
-    thumbnail: ''
+    name: '', brandId: '', description: '', thumbnail: ''
   });
 
-  // State 2: Danh sách biến thể (Con) - Mặc định có 1 dòng trắng
+  // State 2: Biến thể
   const [variants, setVariants] = useState([
     { color: '', ram: '', rom: '', price: 0, stockQuantity: 0, imageUrl: '' }
   ]);
 
-  // Load danh sách Hãng để đổ vào thẻ <select>
   useEffect(() => {
-    axiosClient.get('/brands')
-      .then(res => setBrands(res.data))
-      .catch(err => console.error(err));
+    axiosClient.get('/brands').then(res => setBrands(res.data));
   }, []);
 
-  // --- XỬ LÝ FORM CHA ---
-  const handleProductChange = (e) => {
-    setProductData({ ...productData, [e.target.name]: e.target.value });
+  // --- HÀM UPLOAD (GIỮ NGUYÊN) ---
+  const uploadImage = async (file) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      try {
+          const res = await axiosClient.post("/upload", formData, {
+              headers: { "Content-Type": "multipart/form-data" },
+          });
+          return res.data.url;
+      } catch (error) {
+          toast.error("Lỗi upload ảnh!");
+          return null;
+      }
   };
 
-  // --- XỬ LÝ FORM CON (BIẾN THỂ) ---
-  
-  // 1. Thay đổi dữ liệu của 1 dòng biến thể cụ thể
+  const handleThumbnailUpload = async (e) => {
+      const file = e.target.files[0];
+      if(!file) return;
+      setUploading(true);
+      const url = await uploadImage(file);
+      if(url) {
+          setProductData({ ...productData, thumbnail: url }); // Tự điền link vào state
+          toast.success("Upload xong!");
+      }
+      setUploading(false);
+      e.target.value = null;
+  };
+
+  const handleVariantImageUpload = async (index, e) => {
+      const file = e.target.files[0];
+      if(!file) return;
+      setUploading(true);
+      const url = await uploadImage(file);
+      if(url) {
+          const newVariants = [...variants];
+          newVariants[index].imageUrl = url; // Tự điền link vào state
+          setVariants(newVariants);
+          toast.success("Upload xong!");
+      }
+      setUploading(false);
+      e.target.value = null;
+  };
+
+  // --- CÁC HÀM XỬ LÝ KHÁC (GIỮ NGUYÊN) ---
+  const handleProductChange = (e) => setProductData({ ...productData, [e.target.name]: e.target.value });
   const handleVariantChange = (index, field, value) => {
     const newVariants = [...variants];
     newVariants[index][field] = value;
     setVariants(newVariants);
   };
-
-  // 2. Thêm dòng mới
-  const addVariant = () => {
-    setVariants([...variants, { color: '', ram: '', rom: '', price: 0, stockQuantity: 0, imageUrl: '' }]);
-  };
-
-  // 3. Xóa dòng
+  const addVariant = () => setVariants([...variants, { color: '', ram: '', rom: '', price: 0, stockQuantity: 0, imageUrl: '' }]);
   const removeVariant = (index) => {
-    if (variants.length === 1) {
-        toast.error("Phải có ít nhất 1 phiên bản!");
-        return;
-    }
-    const newVariants = variants.filter((_, i) => i !== index);
-    setVariants(newVariants);
+    if (variants.length === 1) return toast.error("Phải có ít nhất 1 dòng!");
+    setVariants(variants.filter((_, i) => i !== index));
   };
 
-  // --- SUBMIT ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Validate cơ bản
-    if (!productData.name || !productData.brandId) {
-        toast.error("Vui lòng nhập tên và chọn hãng!");
-        return;
-    }
-
+    if (!productData.name || !productData.brandId) return toast.error("Thiếu thông tin!");
     try {
-      // Chuẩn bị cục JSON đúng cấu trúc Backend yêu cầu (CreateProductDto)
       const payload = {
-        name: productData.name,
-        description: productData.description,
-        thumbnail: productData.thumbnail,
-        brandId: parseInt(productData.brandId), // Chuyển string sang int
-        variants: variants.map(v => ({
-            ...v,
-            price: parseFloat(v.price), // Đảm bảo là số
-            stockQuantity: parseInt(v.stockQuantity)
-        }))
+        ...productData,
+        brandId: parseInt(productData.brandId),
+        variants: variants.map(v => ({ ...v, price: parseFloat(v.price), stockQuantity: parseInt(v.stockQuantity) }))
       };
-
       await axiosClient.post('/products', payload);
-      
-      toast.success("Thêm sản phẩm mới thành công!");
-      navigate('/admin/products'); // Quay về danh sách
+      toast.success("Thêm thành công!");
+      navigate('/admin/products');
     } catch (error) {
-      console.error(error);
-      toast.error("Thêm thất bại! Kiểm tra lại dữ liệu.");
+      toast.error("Lỗi thêm sản phẩm");
     }
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto pb-20">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-4">
-            <Link to="/admin/products" className="text-gray-500 hover:text-gray-800">
-                <ArrowLeft size={24} />
-            </Link>
+            <Link to="/admin/products" className="text-gray-500 hover:text-gray-800"><ArrowLeft size={24} /></Link>
             <h1 className="text-2xl font-bold text-gray-800">Thêm điện thoại mới</h1>
         </div>
-        <button 
-            onClick={handleSubmit}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold flex items-center space-x-2 hover:bg-blue-700 shadow"
-        >
-            <Save size={20} />
-            <span>Lưu sản phẩm</span>
+        <button onClick={handleSubmit} disabled={uploading} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold flex items-center space-x-2 hover:bg-blue-700 shadow disabled:opacity-50">
+            <Save size={20} /> <span>{uploading ? "Đang tải ảnh..." : "Lưu sản phẩm"}</span>
         </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* CỘT TRÁI: THÔNG TIN CHUNG */}
+        {/* CỘT TRÁI */}
         <div className="lg:col-span-1 space-y-6">
             <div className="bg-white p-6 rounded-lg shadow">
                 <h3 className="font-bold text-gray-700 mb-4 border-b pb-2">Thông tin chung</h3>
-                
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium mb-1">Tên sản phẩm</label>
                         <input name="name" type="text" className="w-full border p-2 rounded focus:outline-blue-500" onChange={handleProductChange} placeholder="Ví dụ: iPhone 16" />
                     </div>
-                    
                     <div>
-                        <label className="block text-sm font-medium mb-1">Hãng sản xuất</label>
+                        <label className="block text-sm font-medium mb-1">Hãng</label>
                         <select name="brandId" className="w-full border p-2 rounded focus:outline-blue-500" onChange={handleProductChange} defaultValue="">
                             <option value="" disabled>-- Chọn hãng --</option>
-                            {brands.map(b => (
-                                <option key={b.id} value={b.id}>{b.name}</option>
-                            ))}
+                            {brands.map(b => (<option key={b.id} value={b.id}>{b.name}</option>))}
                         </select>
                     </div>
 
+                    {/* --- UPLOAD THUMBNAIL (HYBRID) --- */}
                     <div>
-                        <label className="block text-sm font-medium mb-1">Link Ảnh đại diện</label>
-                        <input name="thumbnail" type="text" className="w-full border p-2 rounded focus:outline-blue-500" onChange={handleProductChange} placeholder="https://..." />
-                        {productData.thumbnail && <img src={productData.thumbnail} alt="Preview" className="mt-2 w-20 h-20 object-contain border rounded"/>}
+                        <label className="block text-sm font-medium mb-1">Ảnh đại diện</label>
+                        
+                        {/* Khu vực Preview */}
+                        <div className="mb-2 w-full h-40 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center bg-gray-50 overflow-hidden relative group">
+                            {productData.thumbnail ? (
+                                <img src={productData.thumbnail} alt="Preview" className="w-full h-full object-contain" onError={(e) => e.target.src = "https://placehold.co/400x400?text=Error"}/>
+                            ) : (
+                                <div className="text-center text-gray-400">
+                                    <ImageIcon size={32} className="mx-auto mb-1 opacity-50"/>
+                                    <span className="text-xs">Chưa có ảnh</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Khu vực Input (Upload + Paste Link) */}
+                        <div className="flex gap-2">
+                            {/* Nút Upload */}
+                            <label className={`flex items-center justify-center px-3 py-2 bg-blue-50 text-blue-600 rounded border border-blue-200 cursor-pointer hover:bg-blue-100 transition ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                {uploading ? <Loader2 size={18} className="animate-spin"/> : <UploadCloud size={18}/>}
+                                <input type="file" className="hidden" accept="image/*" onChange={handleThumbnailUpload} disabled={uploading}/>
+                            </label>
+
+                            {/* Ô nhập Link */}
+                            <div className="relative flex-1">
+                                <LinkIcon size={16} className="absolute left-3 top-3 text-gray-400"/>
+                                <input 
+                                    name="thumbnail" 
+                                    type="text" 
+                                    className="w-full pl-9 pr-3 py-2 border rounded focus:outline-blue-500 text-sm" 
+                                    placeholder="Dán link ảnh hoặc Upload..." 
+                                    value={productData.thumbnail}
+                                    onChange={handleProductChange} // Cho phép gõ tay
+                                />
+                            </div>
+                        </div>
                     </div>
+                    {/* ----------------------------------- */}
 
                     <div>
                         <label className="block text-sm font-medium mb-1">Mô tả</label>
@@ -147,11 +175,11 @@ export default function ProductCreate() {
             </div>
         </div>
 
-        {/* CỘT PHẢI: DANH SÁCH BIẾN THỂ */}
+        {/* CỘT PHẢI: BIẾN THỂ */}
         <div className="lg:col-span-2">
             <div className="bg-white p-6 rounded-lg shadow">
                 <div className="flex justify-between items-center mb-4 border-b pb-2">
-                    <h3 className="font-bold text-gray-700">Các phiên bản (Màu sắc / Bộ nhớ)</h3>
+                    <h3 className="font-bold text-gray-700">Các phiên bản</h3>
                     <button onClick={addVariant} className="text-sm bg-green-100 text-green-700 px-3 py-1 rounded font-bold hover:bg-green-200 flex items-center">
                         <Plus size={16} className="mr-1"/> Thêm dòng
                     </button>
@@ -160,58 +188,49 @@ export default function ProductCreate() {
                 <div className="space-y-6">
                     {variants.map((variant, index) => (
                         <div key={index} className="bg-gray-50 p-4 rounded border relative group">
-                            <button 
-                                onClick={() => removeVariant(index)}
-                                className="absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1"
-                                title="Xóa dòng này"
-                            >
-                                <Trash2 size={18} />
-                            </button>
+                            <button onClick={() => removeVariant(index)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1"><Trash2 size={18} /></button>
 
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <div><label className="text-xs font-bold text-gray-500">Màu sắc</label><input type="text" className="w-full border p-1 rounded text-sm" value={variant.color} onChange={e => handleVariantChange(index, 'color', e.target.value)}/></div>
+                                <div><label className="text-xs font-bold text-gray-500">RAM</label><input type="text" className="w-full border p-1 rounded text-sm" value={variant.ram} onChange={e => handleVariantChange(index, 'ram', e.target.value)}/></div>
+                                <div><label className="text-xs font-bold text-gray-500">ROM</label><input type="text" className="w-full border p-1 rounded text-sm" value={variant.rom} onChange={e => handleVariantChange(index, 'rom', e.target.value)}/></div>
+                                <div><label className="text-xs font-bold text-gray-500">Giá bán</label><input type="number" className="w-full border p-1 rounded text-sm" value={variant.price} onChange={e => handleVariantChange(index, 'price', e.target.value)}/></div>
+                                <div><label className="text-xs font-bold text-gray-500">Kho</label><input type="number" className="w-full border p-1 rounded text-sm" value={variant.stockQuantity} onChange={e => handleVariantChange(index, 'stockQuantity', e.target.value)}/></div>
+
+                                {/* --- UPLOAD ẢNH BIẾN THỂ (HYBRID) --- */}
                                 <div>
-                                    <label className="text-xs font-bold text-gray-500">Màu sắc</label>
-                                    <input type="text" className="w-full border p-1 rounded text-sm" placeholder="Vàng, Đỏ..." 
-                                        value={variant.color} onChange={e => handleVariantChange(index, 'color', e.target.value)}
-                                    />
+                                    <label className="text-xs font-bold text-gray-500 mb-1 block">Ảnh màu này</label>
+                                    <div className="flex gap-1">
+                                        {/* Preview nhỏ */}
+                                        <div className="w-9 h-9 border rounded bg-white flex items-center justify-center overflow-hidden shrink-0">
+                                            {variant.imageUrl ? (
+                                                <img src={variant.imageUrl} className="w-full h-full object-contain" alt=""/>
+                                            ) : <ImageIcon size={14} className="text-gray-300"/>}
+                                        </div>
+
+                                        {/* Nút Upload */}
+                                        <label className={`w-9 h-9 flex items-center justify-center bg-blue-50 text-blue-600 border border-blue-200 rounded cursor-pointer hover:bg-blue-100 ${uploading ? 'opacity-50' : ''}`}>
+                                            {uploading ? <Loader2 size={14} className="animate-spin"/> : <UploadCloud size={14}/>}
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleVariantImageUpload(index, e)} disabled={uploading}/>
+                                        </label>
+
+                                        {/* Ô nhập Link */}
+                                        <input 
+                                            type="text" 
+                                            className="flex-1 border p-1 rounded text-xs focus:outline-blue-500" 
+                                            placeholder="Dán link hoặc Up..."
+                                            value={variant.imageUrl}
+                                            onChange={e => handleVariantChange(index, 'imageUrl', e.target.value)} // Cho phép gõ tay
+                                        />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500">RAM</label>
-                                    <input type="text" className="w-full border p-1 rounded text-sm" placeholder="8GB" 
-                                        value={variant.ram} onChange={e => handleVariantChange(index, 'ram', e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500">ROM</label>
-                                    <input type="text" className="w-full border p-1 rounded text-sm" placeholder="128GB" 
-                                        value={variant.rom} onChange={e => handleVariantChange(index, 'rom', e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500">Giá bán (VNĐ)</label>
-                                    <input type="number" className="w-full border p-1 rounded text-sm" 
-                                        value={variant.price} onChange={e => handleVariantChange(index, 'price', e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500">Số lượng kho</label>
-                                    <input type="number" className="w-full border p-1 rounded text-sm" 
-                                        value={variant.stockQuantity} onChange={e => handleVariantChange(index, 'stockQuantity', e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500">Link Ảnh màu này</label>
-                                    <input type="text" className="w-full border p-1 rounded text-sm" placeholder="https://..."
-                                        value={variant.imageUrl} onChange={e => handleVariantChange(index, 'imageUrl', e.target.value)}
-                                    />
-                                </div>
+                                {/* --------------------------------------- */}
                             </div>
                         </div>
                     ))}
                 </div>
             </div>
         </div>
-
       </div>
     </div>
   );
