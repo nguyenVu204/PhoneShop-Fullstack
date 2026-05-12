@@ -183,7 +183,7 @@ export default function Header() {
       </div>
 
       {/* ─── TẦNG 2: THANH MENU TRẮNG (Chỉ hiện trên Desktop) ─── */}
-      <div className="hidden lg:block bg-white border-b border-gray-100">
+      {/* <div className="hidden lg:block bg-white border-b border-gray-100">
          <div className="container mx-auto px-4">
             <nav className="flex items-center justify-center gap-10 py-3 text-[15px] font-bold text-slate-600">
               <Link to="/" className={`flex items-center gap-2 hover:text-blue-600 transition ${isActive('/') ? 'text-blue-600' : ''}`}>
@@ -204,7 +204,7 @@ export default function Header() {
               </Link>
             </nav>
          </div>
-      </div>
+      </div> */}
 
       {/* ─── MOBILE MENU (Trượt từ trái sang) ─── */}
       <div className={`fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 lg:hidden transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setIsMobileMenuOpen(false)}>

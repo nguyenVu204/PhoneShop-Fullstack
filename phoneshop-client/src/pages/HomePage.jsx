@@ -1,42 +1,14 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
-  ShoppingCart, Heart, ArrowRight, Truck, ShieldCheck, 
-  Headphones, RefreshCw, Zap, Star, ChevronRight, ChevronLeft,
-  Tag, TrendingUp, Award, Clock, Gift, Eye, Search, Smartphone, Shield, CreditCard, Newspaper,
-  ChevronRight as ChevronIcon, Laptop, Tablet, Watch, Headphones as AudioIcon, Cpu
+  ShoppingCart, Heart, Truck, ShieldCheck, 
+  Headphones, RefreshCw, Zap, Star, ChevronRight,
+  Gift, Search, Smartphone, CreditCard, Newspaper,
+  ChevronRight as ChevronIcon, Home, Store, PhoneCall
 } from "lucide-react";
 import axiosClient from "../api/axiosClient";
 import useFavoriteStore from '../stores/useFavoriteStore';
 import NewsCard from "../components/NewsCard";
-
-/* ─── COUNTDOWN TIMER ─── */
-function CountdownTimer({ targetHours = 8 }) {
-  const [time, setTime] = useState({ h: targetHours, m: 0, s: 0 });
-  useEffect(() => {
-    const tick = setInterval(() => {
-      setTime(prev => {
-        let { h, m, s } = prev;
-        if (s > 0) return { h, m, s: s - 1 };
-        if (m > 0) return { h, m: m - 1, s: 59 };
-        if (h > 0) return { h: h - 1, m: 59, s: 59 };
-        return { h: 0, m: 0, s: 0 };
-      });
-    }, 1000);
-    return () => clearInterval(tick);
-  }, []);
-  const pad = n => String(n).padStart(2, "0");
-  return (
-    <div className="flex items-center gap-1.5">
-      {[pad(time.h), pad(time.m), pad(time.s)].map((v, i) => (
-        <span key={i} className="flex items-center gap-1.5">
-          <span className="bg-white text-red-600 font-mono font-black text-sm px-2 py-1 rounded shadow-sm min-w-[32px] text-center">{v}</span>
-          {i < 2 && <span className="text-white font-black text-lg">:</span>}
-        </span>
-      ))}
-    </div>
-  );
-}
 
 /* ─── PRODUCT CARD (UPDATED FOR PROMO) ─── */
 function ProductCard({ product, label, labelColor, badge }) {
@@ -116,13 +88,11 @@ function ProductCard({ product, label, labelColor, badge }) {
 
 /* ─── NEW HERO SECTION (SIDEBAR + SLIDER) ─── */
 const menuCategories = [
-  { icon: Smartphone, name: "Điện thoại iPhone", link: "/shop?search=iphone" },
-  { icon: Smartphone, name: "Điện thoại Samsung", link: "/shop?search=samsung" },
-  { icon: Smartphone, name: "Điện thoại Xiaomi", link: "/shop?search=xiaomi" },
-  { icon: Smartphone, name: "Điện thoại OPPO", link: "/shop?search=oppo" },
-  { icon: Smartphone, name: "Điện thoại Vivo", link: "/shop?search=vivo" },
-  { icon: Smartphone, name: "Điện thoại Realme", link: "/shop?search=realme" },
-  { icon: RefreshCw, name: "Máy cũ / Thu đổi", link: "/shop?sort=price_asc" },
+  { icon: Home, name: "Trang chủ", link: "/" },
+  { icon: Store, name: "Điện thoại", link: "/shop" },
+  { icon: Gift, name: "Khuyến mãi HOT", link: "/shop?sort=price_asc", isHot: true },
+  { icon: Newspaper, name: "Tin tức công nghệ", link: "/news" },
+  { icon: PhoneCall, name: "Liên hệ hỗ trợ", link: "/contact" },
 ];
 
 const bannerSlides = [
@@ -132,7 +102,6 @@ const bannerSlides = [
 
 function HeroSection() {
   const [current, setCurrent] = useState(0);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const timer = setInterval(() => setCurrent(c => (c + 1) % bannerSlides.length), 5000);
@@ -142,15 +111,22 @@ function HeroSection() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-8">
       {/* Sidebar Menu - Chỉ hiện trên màn hình lớn */}
-      <div className="hidden lg:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="py-2">
+      <div className="hidden lg:flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex-1 flex flex-col justify-around py-3">
           {menuCategories.map((item, idx) => (
-            <Link key={idx} to={item.link} className="flex items-center justify-between px-5 py-3 hover:bg-blue-50 hover:text-blue-600 transition-colors text-slate-700 font-semibold text-sm">
-              <div className="flex items-center gap-3">
-                <item.icon size={18} className="text-slate-400 group-hover:text-blue-600"/>
-                {item.name}
+            <Link key={idx} to={item.link} className="flex items-center justify-between px-6 py-4 hover:bg-blue-50 transition-colors group">
+              <div className="flex items-center gap-3 relative">
+                <item.icon size={20} className={item.isHot ? "text-red-500" : "text-slate-500 group-hover:text-blue-600"}/>
+                <span className={`font-bold text-sm ${item.isHot ? "text-red-600" : "text-slate-700 group-hover:text-blue-600"}`}>
+                  {item.name}
+                </span>
+                {item.isHot && (
+                  <span className="absolute -top-3 -right-8 text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded-full animate-pulse shadow-sm">
+                    SALE
+                  </span>
+                )}
               </div>
-              <ChevronIcon size={14} className="text-slate-300"/>
+              <ChevronIcon size={16} className="text-slate-300 group-hover:text-blue-600"/>
             </Link>
           ))}
         </div>
@@ -192,18 +168,15 @@ export default function HomePage() {
     (async () => {
       try {
         setLoading(true);
-        // Lấy danh sách sản phẩm (Tùy chỉnh API để lấy đúng data khuyến mãi)
         const [brandsRes, newRes, newsRes, promoRes] = await Promise.all([
           axiosClient.get('/brands'),
           axiosClient.get('/products?page=1&limit=8&sort=newest'),
           axiosClient.get('/news?page=1&limit=3'),
-          // Giả sử ta lấy sản phẩm có minDiscountPrice > 0 cho Flash Sale
           axiosClient.get('/products?page=1&limit=10&sort=price_asc'), 
         ]);
         setBrands(brandsRes.data);
         setNewProducts(newRes.data.items);
         setLatestNews(newsRes.data.items);
-        // Filter local nếu backend chưa hỗ trợ api/products/promotions
         const sales = promoRes.data.items.filter(p => p.minDiscountPrice > 0);
         setPromoProducts(sales.length > 0 ? sales : promoRes.data.items.slice(0, 4));
       } catch (e) {
@@ -248,12 +221,9 @@ export default function HomePage() {
               <div className="animate-pulse bg-white/20 p-4 rounded-2xl backdrop-blur-md">
                 <Zap size={32} className="text-yellow-400 fill-yellow-400"/>
               </div>
-              <div>
-                <h2 className="text-3xl font-black text-white italic tracking-tighter">FLASH SALE ĐANG DIỄN RA</h2>
-                <div className="mt-2"><CountdownTimer targetHours={5}/></div>
-              </div>
+              <h2 className="text-3xl font-black text-white italic tracking-tighter">FLASH SALE ĐANG DIỄN RA</h2>
             </div>
-            <Link to="/shop?sort=price_asc" className="bg-white text-red-600 px-8 py-3 rounded-full font-black hover:bg-yellow-400 hover:text-red-700 transition shadow-lg">XEM TẤT CẢ ƯU ĐÃI</Link>
+            <Link to="/shop?sort=price_asc" className="bg-white text-red-600 px-8 py-3 rounded-full font-black hover:bg-yellow-400 hover:text-red-700 transition shadow-lg whitespace-nowrap">XEM TẤT CẢ ƯU ĐÃI</Link>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
