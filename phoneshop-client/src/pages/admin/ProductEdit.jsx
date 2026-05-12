@@ -56,6 +56,8 @@ export default function ProductEdit() {
           frontCamera: p.frontCamera || "",
           operatingSystem: p.operatingSystem || "",
         });
+        
+        // Cập nhật lấy thêm discountPrice từ API
         setVariants(
           p.variants.map((v) => ({
             id: v.id,
@@ -63,6 +65,7 @@ export default function ProductEdit() {
             ram: v.ram,
             rom: v.rom,
             price: v.price,
+            discountPrice: v.discountPrice || "", // Lấy giá KM
             stockQuantity: v.stockQuantity,
             imageUrl: v.imageUrl || "",
           })),
@@ -77,9 +80,7 @@ export default function ProductEdit() {
   }, [id, navigate]);
 
   const refreshData = async () => {
-    // Gọi lại API lấy product để update số tồn kho hiển thị
     const res = await axiosClient.get(`/products/${id}`);
-    // ... logic map variants lại như cũ
     setVariants(
       res.data.variants.map((v) => ({
         id: v.id,
@@ -87,6 +88,7 @@ export default function ProductEdit() {
         ram: v.ram,
         rom: v.rom,
         price: v.price,
+        discountPrice: v.discountPrice || "", // Lấy giá KM
         stockQuantity: v.stockQuantity,
         imageUrl: v.imageUrl || "",
       })),
@@ -153,6 +155,7 @@ export default function ProductEdit() {
         ram: "",
         rom: "",
         price: 0,
+        discountPrice: "", // Bổ sung giá KM rỗng khi tạo mới
         stockQuantity: 0,
         imageUrl: "",
       },
@@ -165,18 +168,15 @@ export default function ProductEdit() {
       return toast.error("Sản phẩm phải có ít nhất 1 phiên bản!");
     }
 
-    // Trường hợp 1: Biến thể vừa mới bấm thêm (chưa lưu DB), chỉ cần xóa ở giao diện
     if (variantToRemove.id === 0) {
       setVariants(variants.filter((_, i) => i !== index));
       return;
     }
 
-    // Trường hợp 2: Biến thể đã có trong Database -> Cần gọi API xóa
     if (confirm(`Bạn có chắc muốn xóa phiên bản: ${variantToRemove.color} - ${variantToRemove.rom} không?`)) {
       try {
         await axiosClient.delete(`/products/variant/${variantToRemove.id}`);
         toast.success("Đã xóa phiên bản thành công!");
-        // Xóa xong cập nhật lại giao diện
         setVariants(variants.filter((_, i) => i !== index));
       } catch (error) {
         console.error(error);
@@ -194,6 +194,7 @@ export default function ProductEdit() {
         variants: variants.map((v) => ({
           ...v,
           price: parseFloat(v.price),
+          discountPrice: v.discountPrice ? parseFloat(v.discountPrice) : null, // Gửi giá KM lên API
           stockQuantity: parseInt(v.stockQuantity),
         })),
       };
@@ -325,7 +326,7 @@ export default function ProductEdit() {
                 </div>
               </div>
             </div>
-            {/* -------------------------------- */}
+            
             {/* --- THÊM KHU VỰC THÔNG SỐ KỸ THUẬT --- */}
             <div className="pt-4 border-t">
               <h4 className="font-bold text-sm text-gray-700 mb-3">
@@ -333,22 +334,20 @@ export default function ProductEdit() {
               </h4>
               <div className="grid grid-cols-1 gap-3">
                 <div>
-                  <label className="text-xs font-bold text-gray-500">
-                    Màn hình
-                  </label>
+                  <label className="text-xs font-bold text-gray-500">Màn hình</label>
                   <input
                     name="screen"
+                    value={productData.screen}
                     className="w-full border p-2 rounded text-sm"
                     placeholder="6.7 inch OLED 120Hz"
                     onChange={handleProductChange}
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-500">
-                    Chip xử lý
-                  </label>
+                  <label className="text-xs font-bold text-gray-500">Chip xử lý</label>
                   <input
                     name="chip"
+                    value={productData.chip}
                     className="w-full border p-2 rounded text-sm"
                     placeholder="Snapdragon 8 Gen 3"
                     onChange={handleProductChange}
@@ -356,22 +355,20 @@ export default function ProductEdit() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-xs font-bold text-gray-500">
-                      Pin
-                    </label>
+                    <label className="text-xs font-bold text-gray-500">Pin</label>
                     <input
                       name="battery"
+                      value={productData.battery}
                       className="w-full border p-2 rounded text-sm"
                       placeholder="5000 mAh"
                       onChange={handleProductChange}
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-gray-500">
-                      Hệ điều hành
-                    </label>
+                    <label className="text-xs font-bold text-gray-500">Hệ điều hành</label>
                     <input
                       name="operatingSystem"
+                      value={productData.operatingSystem}
                       className="w-full border p-2 rounded text-sm"
                       placeholder="iOS 17 / Android 14"
                       onChange={handleProductChange}
@@ -379,22 +376,20 @@ export default function ProductEdit() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-500">
-                    Camera sau
-                  </label>
+                  <label className="text-xs font-bold text-gray-500">Camera sau</label>
                   <input
                     name="rearCamera"
+                    value={productData.rearCamera}
                     className="w-full border p-2 rounded text-sm"
                     placeholder="200MP + 12MP + 10MP"
                     onChange={handleProductChange}
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-500">
-                    Camera trước
-                  </label>
+                  <label className="text-xs font-bold text-gray-500">Camera trước</label>
                   <input
                     name="frontCamera"
+                    value={productData.frontCamera}
                     className="w-full border p-2 rounded text-sm"
                     placeholder="12MP"
                     onChange={handleProductChange}
@@ -402,7 +397,6 @@ export default function ProductEdit() {
                 </div>
               </div>
             </div>
-            {/* -------------------------------------- */}
 
             <div>
               <label className="block text-sm font-medium mb-1">Mô tả</label>
@@ -434,67 +428,62 @@ export default function ProductEdit() {
                 key={index}
                 className="bg-gray-50 p-4 rounded border relative group"
               >
-              <button 
-                   onClick={() => handleRemoveVariant(index)}
-                   className="absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1.5 bg-white rounded shadow-sm border border-gray-100 transition-colors"
-                   title="Xóa phiên bản này"
+                <button 
+                  onClick={() => handleRemoveVariant(index)}
+                  className="absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1.5 bg-white rounded shadow-sm border border-gray-100 transition-colors"
+                  title="Xóa phiên bản này"
                 >
                     <Trash2 size={16}/>
                 </button>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="text-xs font-bold text-gray-500">
-                      Màu sắc
-                    </label>
+                    <label className="text-xs font-bold text-gray-500">Màu sắc</label>
                     <input
                       value={variant.color}
-                      onChange={(e) =>
-                        handleVariantChange(index, "color", e.target.value)
-                      }
+                      onChange={(e) => handleVariantChange(index, "color", e.target.value)}
                       className="w-full border p-1 rounded text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-gray-500">
-                      RAM
-                    </label>
+                    <label className="text-xs font-bold text-gray-500">RAM</label>
                     <input
                       value={variant.ram}
-                      onChange={(e) =>
-                        handleVariantChange(index, "ram", e.target.value)
-                      }
+                      onChange={(e) => handleVariantChange(index, "ram", e.target.value)}
                       className="w-full border p-1 rounded text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-gray-500">
-                      ROM
-                    </label>
+                    <label className="text-xs font-bold text-gray-500">ROM</label>
                     <input
                       value={variant.rom}
-                      onChange={(e) =>
-                        handleVariantChange(index, "rom", e.target.value)
-                      }
+                      onChange={(e) => handleVariantChange(index, "rom", e.target.value)}
                       className="w-full border p-1 rounded text-sm"
                     />
                   </div>
+                  
+                  {/* GIÁ GỐC VÀ GIÁ KHUYẾN MÃI */}
                   <div>
-                    <label className="text-xs font-bold text-gray-500">
-                      Giá bán
-                    </label>
+                    <label className="text-xs font-bold text-gray-500">Giá gốc</label>
                     <input
                       type="number"
                       value={variant.price}
-                      onChange={(e) =>
-                        handleVariantChange(index, "price", e.target.value)
-                      }
+                      onChange={(e) => handleVariantChange(index, "price", e.target.value)}
                       className="w-full border p-1 rounded text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-gray-500">
-                      Kho (Auto)
-                    </label>
+                    <label className="text-xs font-bold text-blue-600">Giá KM (Tùy chọn)</label>
+                    <input 
+                      type="number" 
+                      className="w-full border border-blue-200 bg-blue-50 p-1 rounded text-sm focus:outline-blue-500" 
+                      placeholder="Trống: Không giảm" 
+                      value={variant.discountPrice} 
+                      onChange={e => handleVariantChange(index, 'discountPrice', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-gray-500">Kho (Auto)</label>
                     <div className="flex gap-1">
                       <input
                         type="number"
@@ -502,22 +491,22 @@ export default function ProductEdit() {
                         readOnly // KHÓA KHÔNG CHO SỬA TAY
                         className="w-full border p-1 rounded text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
                       />
-                      {/* Nút mở modal */}
-                      <button
-                        onClick={() => setSelectedVariantForImei(variant)}
-                        className="bg-purple-100 text-purple-700 px-2 rounded border border-purple-200 hover:bg-purple-200"
-                        title="Quản lý IMEI"
-                      >
-                        <List size={16} />
-                      </button>
+                      {/* Nút mở modal IMEI (chỉ hiện khi biến thể đã có ID trên DB) */}
+                      {variant.id > 0 && (
+                        <button
+                          onClick={() => setSelectedVariantForImei(variant)}
+                          className="bg-purple-100 text-purple-700 px-2 rounded border border-purple-200 hover:bg-purple-200"
+                          title="Quản lý IMEI"
+                        >
+                          <List size={16} />
+                        </button>
+                      )}
                     </div>
                   </div>
 
                   {/* --- UPLOAD BIẾN THỂ (HYBRID) --- */}
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 mb-1 block">
-                      Ảnh màu này
-                    </label>
+                  <div className="col-span-2">
+                    <label className="text-xs font-bold text-gray-500 mb-1 block">Ảnh màu này</label>
                     <div className="flex gap-1">
                       <div className="w-9 h-9 border rounded bg-white flex items-center justify-center overflow-hidden shrink-0">
                         {variant.imageUrl ? (
@@ -551,13 +540,10 @@ export default function ProductEdit() {
                         className="flex-1 border p-1 rounded text-xs focus:outline-blue-500"
                         placeholder="Link/Up..."
                         value={variant.imageUrl}
-                        onChange={(e) =>
-                          handleVariantChange(index, "imageUrl", e.target.value)
-                        }
+                        onChange={(e) => handleVariantChange(index, "imageUrl", e.target.value)}
                       />
                     </div>
                   </div>
-                  {/* --------------------------------- */}
                 </div>
               </div>
             ))}
@@ -566,13 +552,13 @@ export default function ProductEdit() {
       </div>
 
       {/* Render Modal ở cuối trang */}
-    {selectedVariantForImei && (
+      {selectedVariantForImei && (
         <ImeiManagerModal
             variant={selectedVariantForImei} 
             onClose={() => setSelectedVariantForImei(null)}
             onRefresh={refreshData}
         />
-    )}
+      )}
     </div>
   );
 }

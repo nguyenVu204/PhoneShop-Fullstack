@@ -28,6 +28,10 @@ const useCartStore = create(
             color: variant.color,
             rom: variant.rom,
             price: variant.price,
+            
+            // 👇 ĐÃ THÊM DÒNG NÀY ĐỂ LƯU KÈM GIÁ KHUYẾN MÃI VÀO GIỎ 👇
+            discountPrice: variant.discountPrice, 
+            
             image: variant.imageUrl || variant.image || '', 
             quantity: 1,
           };
@@ -40,7 +44,6 @@ const useCartStore = create(
       },
 
       clearCart: () => set({ items: [] }),
-
       
       updateQuantity: (variantId, quantity) => {
         const currentItems = get().items;

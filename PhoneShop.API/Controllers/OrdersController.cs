@@ -26,7 +26,6 @@ namespace PhoneShop.API.Controllers
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            // Sử dụng Transaction để đảm bảo tính toàn vẹn dữ liệu
             using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
@@ -50,46 +49,44 @@ namespace PhoneShop.API.Controllers
                     var variant = await _context.ProductVariants.FindAsync(item.VariantId);
                     if (variant == null) return BadRequest($"Sản phẩm ID {item.VariantId} không tồn tại.");
 
-                    // --- 1. LOGIC TỰ ĐỘNG LẤY IMEI (QUAN TRỌNG) ---
-                    // Lấy ra n serial numbers đang Available, ưu tiên nhập trước (Id nhỏ)
+                    // 1. TỰ ĐỘNG CHỐT GIÁ: Lấy giá Khuyến mãi (nếu có), ngược lại lấy giá gốc
+                    decimal activePrice = (variant.DiscountPrice.HasValue && variant.DiscountPrice > 0)
+                                            ? variant.DiscountPrice.Value
+                                            : variant.Price;
+
+                    // 2. TỰ ĐỘNG LẤY IMEI
                     var availableSerials = await _context.ProductSerialNumbers
                         .Where(s => s.ProductVariantId == item.VariantId && s.Status == "Available")
-                        .OrderBy(s => s.Id) // FIFO: Xuất cái cũ trước
+                        .OrderBy(s => s.Id)
                         .Take(item.Quantity)
                         .ToListAsync();
 
-                    // Kiểm tra xem có đủ IMEI để bán không?
                     if (availableSerials.Count < item.Quantity)
                     {
                         return BadRequest($"Sản phẩm {variant.Color} chỉ còn {availableSerials.Count} máy (IMEI) khả dụng, không đủ số lượng {item.Quantity} yêu cầu.");
                     }
 
-                    // Cập nhật trạng thái các IMEI này thành SOLD
                     foreach (var serial in availableSerials)
                     {
                         serial.Status = "Sold";
-                        serial.Order = order; // Link với Order này (EF Core tự hiểu OrderId sau khi save)
+                        serial.Order = order;
                     }
 
-                    // Tạo chuỗi IMEI để lưu vào OrderDetail (VD: "IMEI123, IMEI456")
                     string serialString = string.Join(", ", availableSerials.Select(s => s.SerialNumber));
-                    // ---------------------------------------------------
 
-                    // Cập nhật tồn kho (Trừ đi số lượng)
-                    // variant.StockQuantity -= item.Quantity; // Nếu bạn quản lý kho bằng số đếm
-                    // Hoặc chuẩn hơn: StockQuantity sẽ tự tính bằng số lượng Available còn lại (nếu bạn muốn)
+                    // Trừ tồn kho
                     variant.StockQuantity -= item.Quantity;
 
                     var orderDetail = new OrderDetail
                     {
                         ProductVariantId = item.VariantId,
                         Quantity = item.Quantity,
-                        UnitPrice = variant.Price,
+                        UnitPrice = activePrice, // <--- SỬA LỖI: LƯU VÀO ĐƠN GIÁ ĐÃ GIẢM
                         Order = order,
-                        SerialNumber = serialString // <--- LƯU LUÔN TẠI ĐÂY
+                        SerialNumber = serialString
                     };
 
-                    totalAmount += variant.Price * item.Quantity;
+                    totalAmount += activePrice * item.Quantity; // <--- CỘNG VÀO TỔNG TIỀN ĐÃ GIẢM
                     _context.OrderDetails.Add(orderDetail);
                 }
 
@@ -97,13 +94,13 @@ namespace PhoneShop.API.Controllers
                 _context.Orders.Add(order);
 
                 await _context.SaveChangesAsync();
-                await transaction.CommitAsync(); // Xác nhận giao dịch thành công
+                await transaction.CommitAsync();
 
                 return Ok(new { Message = "Đặt hàng thành công", OrderId = order.Id, Total = totalAmount });
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync(); // Nếu lỗi thì hoàn tác tất cả
+                await transaction.RollbackAsync();
                 return StatusCode(500, "Lỗi server: " + ex.Message);
             }
         }
@@ -245,6 +242,56 @@ namespace PhoneShop.API.Controllers
             return Ok(new { Message = "Cập nhật trạng thái thành công" });
         }
 
+        // ========================================================
+        // --- API ADMIN: XÓA ĐƠN HÀNG VÀ HOÀN LẠI TỒN KHO ---
+        // ========================================================
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteOrder(int id)
+        {
+            // Sử dụng Transaction để an toàn dữ liệu
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var order = await _context.Orders
+                    .Include(o => o.OrderDetails)
+                    .FirstOrDefaultAsync(o => o.Id == id);
+
+                if (order == null) return NotFound("Không tìm thấy đơn hàng.");
+
+                // 1. Hoàn lại số lượng tồn kho cho các sản phẩm trong đơn
+                foreach (var detail in order.OrderDetails)
+                {
+                    var variant = await _context.ProductVariants.FindAsync(detail.ProductVariantId);
+                    if (variant != null)
+                    {
+                        variant.StockQuantity += detail.Quantity;
+                    }
+                }
+
+               
+                var serials = await _context.ProductSerialNumbers.Where(s => s.OrderId == id).ToListAsync();
+                foreach (var serial in serials)
+                {
+                    serial.Status = "Available";
+                    serial.OrderId = null;
+                }
+
+                
+                _context.Orders.Remove(order);
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Ok(new { Message = "Đã xóa đơn hàng và hoàn lại tồn kho thành công." });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, "Lỗi server: " + ex.Message);
+            }
+        }
+
         // POST: api/orders/assign-imei
         [HttpPost("assign-imei")]
         [Authorize(Roles = "Admin")]
@@ -334,7 +381,6 @@ namespace PhoneShop.API.Controllers
             {
                 var worksheet = workbook.Worksheets.Add("DonHang");
 
-                // Header
                 worksheet.Cell(1, 1).Value = "Mã Đơn";
                 worksheet.Cell(1, 2).Value = "Ngày Đặt";
                 worksheet.Cell(1, 3).Value = "Khách Hàng";

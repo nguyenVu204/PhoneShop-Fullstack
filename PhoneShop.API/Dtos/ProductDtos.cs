@@ -7,6 +7,7 @@
         public string Name { get; set; } = string.Empty;
         public string BrandName { get; set; } = string.Empty; // Chỉ cần tên hãng, không cần cả object Brand
         public decimal MinPrice { get; set; } // Giá thấp nhất (Ví dụ: Từ 20tr)
+        public decimal? MinDiscountPrice { get; set; }
         public string? Description { get; set; }
         public string? Thumbnail { get; set; }
     }
@@ -40,6 +41,7 @@
         public string Ram { get; set; } = string.Empty;
         public string Rom { get; set; } = string.Empty;
         public decimal Price { get; set; }
+        public decimal? DiscountPrice { get; set; }
         public int StockQuantity { get; set; }
         public string? ImageUrl { get; set; }
     }
@@ -69,6 +71,7 @@
         public string Ram { get; set; } = string.Empty;
         public string Rom { get; set; } = string.Empty;
         public decimal Price { get; set; }
+        public decimal? DiscountPrice { get; set; }
         public int StockQuantity { get; set; }
         public string? ImageUrl { get; set; }
     }
@@ -98,6 +101,7 @@
         public string Ram { get; set; } = string.Empty;
         public string Rom { get; set; } = string.Empty;
         public decimal Price { get; set; }
+        public decimal? DiscountPrice { get; set; }
         public int StockQuantity { get; set; }
         public string? ImageUrl { get; set; }
     }

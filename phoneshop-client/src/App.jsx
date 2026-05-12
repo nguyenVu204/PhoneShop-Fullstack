@@ -36,6 +36,7 @@ import NewsCategoryManager from "./pages/admin/NewsCategoryManager";
 import ConfirmEmail from "./pages/ConfirmEmail";
 import ChatBox from "./components/ChatBox";
 import InventoryManager from "./pages/admin/InventoryManager";
+import PromotionManager from "./pages/admin/PromotionManager";
 
 function App() {
   const { user } = useAuthStore();
@@ -115,6 +116,7 @@ function App() {
             <Route path="news/edit/:id" element={<NewsEdit />} />
             <Route path="news/categories" element={<NewsCategoryManager />} />
             <Route path="inventory" element={<InventoryManager />} />
+            <Route path="promotions" element={<PromotionManager />} />
           </Route>
         </Route>
       </Routes>

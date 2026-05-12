@@ -17,6 +17,8 @@ namespace PhoneShop.API.Models
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; } // Giá bán biến động theo RAM/ROM
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? DiscountPrice { get; set; }
 
         public int StockQuantity { get; set; } // Số lượng tồn kho
 

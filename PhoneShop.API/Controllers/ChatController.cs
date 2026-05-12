@@ -34,54 +34,112 @@ namespace PhoneShop.API.Controllers
                 if (string.IsNullOrWhiteSpace(request.Message))
                     return BadRequest("Vui lòng nhập câu hỏi.");
 
-                var apiKey = _config["OpenRouter:ApiKey"];
-                if (string.IsNullOrEmpty(apiKey))
-                    return StatusCode(500, "Thiếu OpenRouter API Key");
+                var apiKey = _config["Groq:ApiKey"];
 
-                // 🔹 1. Lấy sản phẩm
+                if (string.IsNullOrEmpty(apiKey))
+                    return StatusCode(500, "Thiếu API Key");
+
+                // lấy sản phẩm
+
                 var products = await _context.Products
+                    .Include(p => p.Brand)
                     .Include(p => p.Variants)
+                    .Where(p =>
+                        p.Name.Contains(request.Message) ||
+                        p.Brand.Name.Contains(request.Message))
                     .Take(5)
                     .Select(p => new
                     {
+                        p.Id,
                         TenMay = p.Name,
-                        GiaThapNhat = p.Variants.Any() ? p.Variants.Min(v => v.Price) : 0,
+                        Hang = p.Brand.Name,
+                        GiaThapNhat = p.Variants.Any()
+                            ? p.Variants.Min(v => v.Price)
+                            : 0,
                         CauHinh = $"{p.Chip}, {p.Screen}, {p.Battery}"
                     })
                     .ToListAsync();
 
-                string productContext = string.Join("\n", products.Select(p =>
-                    $"- {p.TenMay}: Giá từ {p.GiaThapNhat:N0} VNĐ (Cấu hình: {p.CauHinh})"
-                ));
+                // fallback
+                if (!products.Any())
+                {
+                    products = await _context.Products
+                        .Include(p => p.Brand)
+                        .Include(p => p.Variants)
+                        .Take(5)
+                        .Select(p => new
+                        {
+                            p.Id,
+                            TenMay = p.Name,
+                            Hang = p.Brand.Name,
+                            GiaThapNhat = p.Variants.Any()
+                                ? p.Variants.Min(v => v.Price)
+                                : 0,
+                            CauHinh = $"{p.Chip}, {p.Screen}, {p.Battery}"
+                        })
+                        .ToListAsync();
+                }
 
-                // 🔹 2. Prompt
+                //BUILD CONTEXT
+
+                var contextBuilder = new StringBuilder();
+
+                foreach (var p in products)
+                {
+                    contextBuilder.AppendLine(
+                        $"- [{p.TenMay}](/product/{p.Id}) ({p.Hang}) | Giá: {p.GiaThapNhat:N0} VNĐ | {p.CauHinh}"
+                    );
+                }
+
+                //SYSTEM PROMPT
+
                 string systemPrompt = $@"
-Bạn là nhân viên tư vấn bán điện thoại của PhoneShop.
+Bạn là nhân viên tư vấn bán điện thoại của TechMobile.
 
-Danh sách sản phẩm:
-{productContext}
+DANH SÁCH SẢN PHẨM:
+{contextBuilder}
 
-Quy tắc:
-- Xưng hô thân thiện (dạ, mình, bạn...)
-- Trả lời ngắn gọn, có emoji
-- BẮT BUỘC báo giá chính xác
-- Nếu không có sản phẩm → gợi ý tương tự
+QUY TẮC:
+- Trả lời ngắn gọn, dễ hiểu.
+- Dùng emoji nhẹ 😊📱
+- KHÔNG bịa sản phẩm ngoài danh sách.
+- GIỮ NGUYÊN format link markdown.
+- Không dùng markdown in đậm (**).
+- Có thể gợi ý thêm sản phẩm tương tự.
 
-Khách hỏi: {request.Message}
+KHÁCH HỎI:
+{request.Message}
 ";
 
-                // 🔹 3. Gọi OpenRouter FREE
+                // CALL API
+
                 _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-                _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "http://localhost:5173"); // optional
-                _httpClient.DefaultRequestHeaders.Add("X-Title", "PhoneShop AI"); // optional
+
+                _httpClient.DefaultRequestHeaders.Add(
+                    "Authorization",
+                    $"Bearer {apiKey}"
+                );
 
                 var requestBody = new
                 {
-                    model = "deepseek/deepseek-chat",
+                    model = "llama-3.1-8b-instant",
+
+                    max_tokens = 200,
+
+                    temperature = 0.5,
+
                     messages = new[]
                     {
-                        new { role = "system", content = systemPrompt }
+                        new
+                        {
+                            role = "system",
+                            content = systemPrompt
+                        },
+                        new
+                        {
+                            role = "user",
+                            content = request.Message
+                        }
                     }
                 };
 
@@ -92,22 +150,25 @@ Khách hỏi: {request.Message}
                 );
 
                 var response = await _httpClient.PostAsync(
-                    "https://openrouter.ai/api/v1/chat/completions",
+                    "https://api.groq.com/openai/v1/chat/completions",
                     jsonContent
                 );
 
+                var responseString =
+                    await response.Content.ReadAsStringAsync();
+
                 if (!response.IsSuccessStatusCode)
                 {
-                    var error = await response.Content.ReadAsStringAsync();
-                    return StatusCode(500, "OpenRouter error: " + error);
+                    return StatusCode(
+                        500,
+                        "Groq error: " + responseString
+                    );
                 }
 
-                var responseString = await response.Content.ReadAsStringAsync();
+                using var doc =
+                    JsonDocument.Parse(responseString);
 
-                using var doc = JsonDocument.Parse(responseString);
-                var root = doc.RootElement;
-
-                var reply = root
+                var reply = doc.RootElement
                     .GetProperty("choices")[0]
                     .GetProperty("message")
                     .GetProperty("content")
@@ -117,8 +178,12 @@ Khách hỏi: {request.Message}
             }
             catch (Exception ex)
             {
-                return StatusCode(500, "Lỗi server: " + ex.Message);
+                return StatusCode(
+                    500,
+                    "Lỗi server: " + ex.Message
+                );
             }
         }
     }
 }
+

@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import axiosClient from "../api/axiosClient";
 import useCartStore from "../stores/useCartStore";
 import ReviewSection from "../components/ReviewSection";
-import NewsCard from "../components/NewsCard"; // Gọi component NewsCard
+import NewsCard from "../components/NewsCard";
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -15,7 +15,7 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]); 
-  const [newsList, setNewsList] = useState([]); // State chứa Tin tức
+  const [newsList, setNewsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState(null);
 
@@ -39,10 +39,9 @@ export default function ProductDetail() {
           setSelectedVariant(data.variants[0]);
         }
 
-        // Gọi API song song: Sản phẩm liên quan + Tin tức
         const [relatedRes, newsRes] = await Promise.all([
             data.brandId ? axiosClient.get(`/products?page=1&limit=5&brandId=${data.brandId}`) : Promise.resolve({data: {items: []}}),
-            axiosClient.get('/news?page=1&limit=4') // Lấy 4 bài tin tức mới nhất
+            axiosClient.get('/news?page=1&limit=4') 
         ]);
 
         if (data.brandId) {
@@ -66,11 +65,16 @@ export default function ProductDetail() {
   if (loading) return <div className="min-h-screen flex justify-center items-center"><div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>;
   if (!product) return <div className="p-10 text-center text-red-500 font-bold">Không tìm thấy sản phẩm!</div>;
 
+  // Tính phần trăm giảm giá của phiên bản đang chọn
+  const discountPercent = selectedVariant?.discountPrice 
+    ? Math.round(((selectedVariant.price - selectedVariant.discountPrice) / selectedVariant.price) * 100) 
+    : 0;
+
   return (
     <div className="bg-[#f8f9fa] min-h-screen pb-12">
       <div className="max-w-[1280px] mx-auto px-4 md:px-6 py-6">
         
-        {/* 1. BREADCRUMB */}
+        {/* BREADCRUMB */}
         <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6 font-medium">
           <Link to="/" className="hover:text-blue-600 flex items-center gap-1"><Home size={14} /> Trang chủ</Link>
           <ChevronRight size={14} />
@@ -79,12 +83,20 @@ export default function ProductDetail() {
           <span className="text-gray-900 truncate">{product.name}</span>
         </nav>
 
-        {/* 2. MAIN PRODUCT SECTION */}
+        {/* MAIN PRODUCT SECTION */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
           
-          {/* CỘT TRÁI: ẢNH (Đã thu nhỏ & Căn đối) */}
+          {/* CỘT TRÁI: ẢNH */}
           <div className="space-y-4">
             <div className="aspect-square bg-white rounded-2xl flex items-center justify-center overflow-hidden border border-gray-100 relative group p-8">
+              
+              {/* Badge Giảm giá lớn */}
+              {discountPercent > 0 && (
+                 <div className="absolute top-4 left-4 z-20 bg-red-600 text-white text-sm font-black px-3 py-1.5 rounded-xl shadow-lg animate-bounce">
+                    GIẢM {discountPercent}%
+                 </div>
+              )}
+
               <img
                 src={selectedVariant?.imageUrl || product.thumbnail}
                 alt={product.name}
@@ -121,16 +133,30 @@ export default function ProductDetail() {
               {product.name}
             </h1>
 
-            {/* Giá & Kho */}
+            {/* GIÁ & KHO (ĐÃ CẬP NHẬT LOGIC KHUYẾN MÃI) */}
             <div className="bg-gray-50/80 border border-gray-100 p-5 rounded-2xl mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <span className="text-3xl font-black text-red-600 block mb-1">
-                  {selectedVariant?.price.toLocaleString("vi-VN")} ₫
-                </span>
-                <span className="text-sm text-gray-400 line-through font-medium">
-                  {(selectedVariant?.price * 1.15).toLocaleString("vi-VN")} ₫
-                </span>
+                {selectedVariant?.discountPrice ? (
+                    <>
+                        <span className="text-3xl font-black text-red-600 block mb-1">
+                          {selectedVariant.discountPrice.toLocaleString("vi-VN")} ₫
+                        </span>
+                        <div className="flex items-center gap-2">
+                           <span className="text-sm text-gray-400 line-through font-medium">
+                             {selectedVariant.price.toLocaleString("vi-VN")} ₫
+                           </span>
+                           <span className="text-[10px] font-bold text-red-500 bg-red-100 px-2 py-0.5 rounded uppercase">
+                             Tiết kiệm {(selectedVariant.price - selectedVariant.discountPrice).toLocaleString()} ₫
+                           </span>
+                        </div>
+                    </>
+                ) : (
+                    <span className="text-3xl font-black text-blue-600 block mb-1">
+                      {selectedVariant?.price?.toLocaleString("vi-VN")} ₫
+                    </span>
+                )}
               </div>
+
               {selectedVariant && (
                 <div className={`text-sm px-4 py-2 rounded-xl font-bold flex items-center gap-2 border ${selectedVariant.stockQuantity > 0 ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-600 border-red-200"}`}>
                   {selectedVariant.stockQuantity > 0 ? <Check size={16} /> : null}
@@ -158,6 +184,10 @@ export default function ProductDetail() {
                       >
                         <span>{v.color}</span>
                         <span className="text-xs font-medium text-gray-500 mt-0.5">{v.rom}</span>
+                        {/* Ký hiệu sale nhỏ trên biến thể nếu có KM */}
+                        {v.discountPrice > 0 && !isSelected && (
+                            <span className="absolute -top-2 -right-2 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
+                        )}
                         {isSelected && <div className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full p-0.5 shadow-sm"><Check size={12} /></div>}
                       </button>
                     );
@@ -197,16 +227,13 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* 3. MÔ TẢ & ĐÁNH GIÁ */}
+        {/* MÔ TẢ & ĐÁNH GIÁ */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-          
-          {/* Cột trái (Mô tả + Review) */}
           <div className="lg:col-span-2 space-y-8">
             <div className="bg-white p-6 md:p-10 rounded-3xl shadow-sm border border-gray-100">
               <h2 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-2">
                  Đặc điểm nổi bật
               </h2>
-              {/* ĐÃ FIX CSS: Khóa chiều rộng ảnh và video để không bị khổng lồ */}
               <div 
                 className="
                     prose prose-blue max-w-none text-gray-700 leading-relaxed
@@ -219,7 +246,6 @@ export default function ProductDetail() {
             <ReviewSection productId={id} />
           </div>
 
-          {/* Cột phải: Thông số kỹ thuật */}
           <div className="lg:col-span-1">
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 sticky top-6">
               <h3 className="text-xl font-black text-gray-900 mb-6">Thông số kỹ thuật</h3>
@@ -257,31 +283,57 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* 4. SẢN PHẨM LIÊN QUAN */}
+        {/* SẢN PHẨM CÙNG HÃNG (CẬP NHẬT GIAO DIỆN KHUYẾN MÃI) */}
         {relatedProducts.length > 0 && (
           <div className="mb-14">
             <h2 className="text-2xl font-black text-gray-900 mb-6">Sản phẩm cùng hãng</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {relatedProducts.map((p) => (
-                <Link key={p.id} to={`/product/${p.id}`} className="group bg-white p-4 rounded-2xl border border-gray-100 hover:shadow-xl hover:border-blue-200 transition-all duration-300 flex flex-col hover:-translate-y-1">
-                  <div className="bg-white rounded-xl h-44 flex items-center justify-center mb-4 p-4 overflow-hidden relative">
-                    <img src={p.thumbnail} alt={p.name} className="w-full h-full object-contain group-hover:scale-110 transition duration-500" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1.5">{p.brandName}</p>
-                    <h3 className="font-bold text-gray-800 text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition leading-snug">{p.name}</h3>
-                  </div>
-                  <div className="mt-auto flex items-end justify-between">
-                    <span className="text-red-600 font-black text-lg">{p.minPrice.toLocaleString("vi-VN")} ₫</span>
-                    <span className="w-9 h-9 rounded-full bg-gray-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition shadow-sm"><ShoppingCart size={16} /></span>
-                  </div>
-                </Link>
-              ))}
+              {relatedProducts.map((p) => {
+                const hasPromo = p.minDiscountPrice && p.minDiscountPrice > 0;
+                const pDiscountPercent = hasPromo 
+                    ? Math.round(((p.minPrice - p.minDiscountPrice) / p.minPrice) * 100) 
+                    : 0;
+
+                return (
+                  <Link key={p.id} to={`/product/${p.id}`} className="group bg-white p-4 rounded-2xl border border-gray-100 hover:shadow-xl hover:border-blue-200 transition-all duration-300 flex flex-col hover:-translate-y-1 relative">
+                    
+                    {/* Badge Giảm giá */}
+                    {hasPromo && (
+                        <div className="absolute top-2 left-2 z-10 bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-lg shadow-md">
+                            GIẢM {pDiscountPercent}%
+                        </div>
+                    )}
+
+                    <div className="bg-white rounded-xl h-44 flex items-center justify-center mb-4 p-4 overflow-hidden relative">
+                      <img src={p.thumbnail} alt={p.name} className="w-full h-full object-contain group-hover:scale-110 transition duration-500" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1.5">{p.brandName}</p>
+                      <h3 className="font-bold text-gray-800 text-sm mb-2 line-clamp-2 group-hover:text-blue-600 transition leading-snug">{p.name}</h3>
+                    </div>
+                    <div className="mt-auto flex items-end justify-between">
+                      <div>
+                         {hasPromo ? (
+                             <>
+                                <span className="text-red-600 font-black text-lg block leading-none">{p.minDiscountPrice.toLocaleString("vi-VN")} ₫</span>
+                                <span className="text-gray-400 text-[11px] line-through">{p.minPrice.toLocaleString("vi-VN")} ₫</span>
+                             </>
+                         ) : (
+                             <span className="text-blue-600 font-black text-lg">{p.minPrice.toLocaleString("vi-VN")} ₫</span>
+                         )}
+                      </div>
+                      <span className="w-9 h-9 rounded-full bg-gray-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition shadow-sm">
+                          <ShoppingCart size={16} />
+                      </span>
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           </div>
         )}
 
-        {/* 5. TIN TỨC LIÊN QUAN (MỚI BỔ SUNG) */}
+        {/* TIN TỨC LIÊN QUAN */}
         {newsList.length > 0 && (
           <div className="mb-10">
             <div className="flex items-center justify-between mb-6">

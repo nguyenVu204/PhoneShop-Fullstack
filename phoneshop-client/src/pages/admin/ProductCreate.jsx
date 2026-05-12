@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Plus, Trash2, Save, UploadCloud, Loader2, Link as LinkIcon, Image as ImageIcon } from 'lucide-react'; // Thêm icon LinkIcon
+import { ArrowLeft, Plus, Trash2, Save, UploadCloud, Loader2, Link as LinkIcon, Image as ImageIcon } from 'lucide-react'; 
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import axiosClient from '../../api/axiosClient';
@@ -19,9 +19,9 @@ export default function ProductCreate() {
     operatingSystem: ''
   });
 
-  // State 2: Biến thể
+  // State 2: Biến thể (Đã thêm discountPrice)
   const [variants, setVariants] = useState([
-    { color: '', ram: '', rom: '', price: 0, stockQuantity: 0, imageUrl: '' }
+    { color: '', ram: '', rom: '', price: 0, discountPrice: '', stockQuantity: 0, imageUrl: '' }
   ]);
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function ProductCreate() {
       setUploading(true);
       const url = await uploadImage(file);
       if(url) {
-          setProductData({ ...productData, thumbnail: url }); // Tự điền link vào state
+          setProductData({ ...productData, thumbnail: url }); 
           toast.success("Upload xong!");
       }
       setUploading(false);
@@ -63,7 +63,7 @@ export default function ProductCreate() {
       const url = await uploadImage(file);
       if(url) {
           const newVariants = [...variants];
-          newVariants[index].imageUrl = url; // Tự điền link vào state
+          newVariants[index].imageUrl = url; 
           setVariants(newVariants);
           toast.success("Upload xong!");
       }
@@ -71,14 +71,17 @@ export default function ProductCreate() {
       e.target.value = null;
   };
 
-  // --- CÁC HÀM XỬ LÝ KHÁC (GIỮ NGUYÊN) ---
+  // --- CÁC HÀM XỬ LÝ KHÁC ---
   const handleProductChange = (e) => setProductData({ ...productData, [e.target.name]: e.target.value });
   const handleVariantChange = (index, field, value) => {
     const newVariants = [...variants];
     newVariants[index][field] = value;
     setVariants(newVariants);
   };
-  const addVariant = () => setVariants([...variants, { color: '', ram: '', rom: '', price: 0, stockQuantity: 0, imageUrl: '' }]);
+  
+  // Cập nhật hàm addVariant để chứa thêm discountPrice
+  const addVariant = () => setVariants([...variants, { color: '', ram: '', rom: '', price: 0, discountPrice: '', stockQuantity: 0, imageUrl: '' }]);
+  
   const removeVariant = (index) => {
     if (variants.length === 1) return toast.error("Phải có ít nhất 1 dòng!");
     setVariants(variants.filter((_, i) => i !== index));
@@ -91,7 +94,13 @@ export default function ProductCreate() {
       const payload = {
         ...productData,
         brandId: parseInt(productData.brandId),
-        variants: variants.map(v => ({ ...v, price: parseFloat(v.price), stockQuantity: parseInt(v.stockQuantity) }))
+        // Chuyển đổi dữ liệu và xử lý giá KM
+        variants: variants.map(v => ({ 
+            ...v, 
+            price: parseFloat(v.price), 
+            discountPrice: v.discountPrice ? parseFloat(v.discountPrice) : null, // Nếu có nhập KM thì gửi số, không thì gửi null
+            stockQuantity: parseInt(v.stockQuantity) 
+        }))
       };
       await axiosClient.post('/products', payload);
       toast.success("Thêm thành công!");
@@ -229,15 +238,23 @@ export default function ProductCreate() {
                         <div key={index} className="bg-gray-50 p-4 rounded border relative group">
                             <button onClick={() => removeVariant(index)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1"><Trash2 size={18} /></button>
 
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div><label className="text-xs font-bold text-gray-500">Màu sắc</label><input type="text" className="w-full border p-1 rounded text-sm" value={variant.color} onChange={e => handleVariantChange(index, 'color', e.target.value)}/></div>
                                 <div><label className="text-xs font-bold text-gray-500">RAM</label><input type="text" className="w-full border p-1 rounded text-sm" value={variant.ram} onChange={e => handleVariantChange(index, 'ram', e.target.value)}/></div>
                                 <div><label className="text-xs font-bold text-gray-500">ROM</label><input type="text" className="w-full border p-1 rounded text-sm" value={variant.rom} onChange={e => handleVariantChange(index, 'rom', e.target.value)}/></div>
-                                <div><label className="text-xs font-bold text-gray-500">Giá bán</label><input type="number" className="w-full border p-1 rounded text-sm" value={variant.price} onChange={e => handleVariantChange(index, 'price', e.target.value)}/></div>
+                                
+                                {/* 👇 ĐÃ THÊM Ô NHẬP GIÁ KHUYẾN MÃI VÀO ĐÂY 👇 */}
+                                <div><label className="text-xs font-bold text-gray-500">Giá gốc</label><input type="number" className="w-full border p-1 rounded text-sm" value={variant.price} onChange={e => handleVariantChange(index, 'price', e.target.value)}/></div>
+                                <div>
+                                    <label className="text-xs font-bold text-blue-600">Giá KM (Tùy chọn)</label>
+                                    <input type="number" className="w-full border border-blue-200 bg-blue-50 p-1 rounded text-sm focus:outline-blue-500" placeholder="Bỏ trống nếu không giảm" value={variant.discountPrice} onChange={e => handleVariantChange(index, 'discountPrice', e.target.value)}/>
+                                </div>
+                                {/* 👆 KẾT THÚC KHU VỰC KHUYẾN MÃI 👆 */}
+
                                 <div><label className="text-xs font-bold text-gray-500">Kho</label><input type="number" className="w-full border p-1 rounded text-sm" value={variant.stockQuantity} onChange={e => handleVariantChange(index, 'stockQuantity', e.target.value)}/></div>
 
                                 {/* --- UPLOAD ẢNH BIẾN THỂ (HYBRID) --- */}
-                                <div>
+                                <div className="col-span-2">
                                     <label className="text-xs font-bold text-gray-500 mb-1 block">Ảnh màu này</label>
                                     <div className="flex gap-1">
                                         {/* Preview nhỏ */}
@@ -259,7 +276,7 @@ export default function ProductCreate() {
                                             className="flex-1 border p-1 rounded text-xs focus:outline-blue-500" 
                                             placeholder="Dán link hoặc Up..."
                                             value={variant.imageUrl}
-                                            onChange={e => handleVariantChange(index, 'imageUrl', e.target.value)} // Cho phép gõ tay
+                                            onChange={e => handleVariantChange(index, 'imageUrl', e.target.value)} 
                                         />
                                     </div>
                                 </div>

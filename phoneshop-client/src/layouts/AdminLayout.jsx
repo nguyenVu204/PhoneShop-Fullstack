@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingBag, Users, LogOut, Menu, X, Tag, Newspaper, Archive } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, Users, LogOut, Menu, X, Tag, Newspaper, Archive, Gift } from 'lucide-react';
 import useAuthStore from '../stores/useAuthStore';
 
 export default function AdminLayout() {
@@ -19,6 +19,7 @@ export default function AdminLayout() {
     { name: 'Quản lý Hãng', path: '/admin/brands', icon: <Tag size={20} /> },
     { name: 'Đơn hàng', path: '/admin/orders', icon: <ShoppingBag size={20} /> },
     { name: 'Tồn kho', path: '/admin/inventory', icon: <Archive size={20} /> },
+    { name: 'Khuyến mãi', path: '/admin/promotions', icon: <Gift size={20} /> },
     { name: 'Người dùng', path: '/admin/users', icon: <Users size={20} /> },
     { name: 'Tin tức', path: '/admin/news', icon: <Newspaper size={20} /> },
   ];
@@ -46,7 +47,7 @@ export default function AdminLayout() {
         {/* Logo Area */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800">
           <Link to="/" className="text-xl font-bold tracking-wide flex items-center gap-2">
-            <span className="bg-blue-600 text-white p-1 rounded">PS</span> PhoneShop
+            <span className="bg-blue-600 text-white p-1 rounded">TM</span> TechMobile
           </Link>
           {/* Nút đóng menu */}
           <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-white">

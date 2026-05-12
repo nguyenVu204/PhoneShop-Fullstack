@@ -15,7 +15,7 @@ export default function Footer() {
                <div className="bg-blue-600 p-2 rounded-lg">
                   <Smartphone size={24} className="text-white"/>
                </div>
-               <span className="text-2xl font-bold tracking-tight">PhoneShop</span>
+               <span className="text-2xl font-bold tracking-tight">TechMobile</span>
             </Link>
             <p className="mb-6 text-sm leading-relaxed text-gray-400">
               Hệ thống bán lẻ điện thoại di động chính hãng uy tín hàng đầu. Cam kết giá tốt nhất, bảo hành chu đáo.
@@ -31,7 +31,7 @@ export default function Footer() {
                 </p>
                 <p className="flex items-center gap-3">
                     <Mail size={18} className="text-blue-500 shrink-0"/>
-                    <span>support@phoneshop.com.vn</span>
+                    <span>support@techmobile.vn</span>
                 </p>
             </div>
           </div>
